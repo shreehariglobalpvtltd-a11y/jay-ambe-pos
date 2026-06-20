@@ -1,0 +1,8 @@
+{
+  "name": "jay-ambe-pos",
+  "version": "1.0.0",
+  "description": "Jay Ambe Fast Food & Restaurant — Desktop POS with SQLite",
+  "scripts": {
+    "tauri": "cargo tauri"
+  }
+}

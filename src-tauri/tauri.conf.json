@@ -1,0 +1,40 @@
+{
+  "package": {
+    "productName": "Jay Ambe POS",
+    "version": "1.0.0"
+  },
+  "build": {
+    "distDir": "../",
+    "devPath": "../",
+    "beforeDevCommand": "",
+    "beforeBuildCommand": ""
+  },
+  "tauri": {
+    "windows": [
+      {
+        "title": "Jay Ambe POS v27 — Jay Ambe Fast Food & Restaurant",
+        "width": 1280,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false,
+        "minWidth": 900,
+        "minHeight": 600
+      }
+    ],
+    "allowlist": {
+      "all": false,
+      "shell": { "open": true },
+      "dialog": { "open": true, "save": true },
+      "fs": { "all": true, "scope": ["$DOCUMENT/*", "$APPDATA/*", "$TEMP/*"] },
+      "notification": { "all": true }
+    },
+    "bundle": {
+      "active": true,
+      "icon": [],
+      "identifier": "com.jayambe.pos"
+    },
+    "security": {
+      "csp": null
+    }
+  }
+}
