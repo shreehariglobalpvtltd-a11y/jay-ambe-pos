@@ -12619,7 +12619,11 @@ var PERM_GROUPS=[
    ['pay.wallet','Wallet Payment'],['pay.credit','Credit Payment'],['pay.changeMode','Change Payment Mode'],
    ['pay.changeModeAfter','Change Mode After Paid ⛔'],['pay.edit','Edit Payment'],
    ['pay.editCompleted','Edit Completed Payment ⛔'],['pay.delete','Delete Payment ⛔'],
-   ['pay.refund','Refund Payment ⛔'],['pay.reopenClosed','Reopen Closed Bill ⛔']]},
+   ['pay.refund','Refund Payment ⛔'],['pay.reopenClosed','Reopen Closed Bill ⛔'],
+   ['pay.creditOverLimit','Credit Limit Override ⛔']]},
+ {g:'📒 Khata / Due', perms:[
+   ['nav.khata','Khata Book Page'],['khata.view','View Khata'],['khata.collect','Collect Payment'],
+   ['khata.editCustomer','Edit Customer'],['khata.waive','Waive/Adjust Due ⛔'],['khata.deleteCustomer','Delete Customer ⛔']]},
  {g:'🎟️ KOT', perms:[
    ['kot.generate','Generate KOT'],['kot.reprint','Reprint KOT'],['kot.delete','Delete KOT ⛔'],
    ['kot.cancel','Cancel KOT ⛔'],['kot.merge','Merge KOT'],['kot.transfer','Transfer KOT'],
@@ -12667,7 +12671,8 @@ var PROTECTED={};
  'kot.delete','kot.cancel','inv.stockDelete','inv.purchaseDelete','exp.delete','rep.delete',
  'tbl.deleteRunning','tbl.forceClose','usr.delete','usr.resetPassword','usr.resetPin',
  'sys.restore','sys.factoryReset','sys.firebaseConfig','sys.dbAccess','prn.mapping',
- 'sec.logsClear','sec.trashPurge','sec.emergency'].forEach(function(k){ PROTECTED[k]=true; });
+ 'sec.logsClear','sec.trashPurge','sec.emergency',
+ 'pay.creditOverLimit','khata.waive','khata.deleteCustomer'].forEach(function(k){ PROTECTED[k]=true; });
 
 /* ═══════════ ROLES ═══════════ */
 function permSet(val, overrides){
@@ -12697,12 +12702,14 @@ function defaultRoles(){
     'bill.create','bill.edit','bill.cancel','bill.reprint','bill.duplicate','bill.split','bill.merge','bill.transfer',
     'bill.discount','bill.roundoff','pay.cash','pay.card','pay.upi','pay.wallet','pay.changeMode',
     'kot.generate','kot.reprint','kot.merge','kot.transfer','kot.edit','kot.kitchenComplete','kot.kitchenRecall',
-    'tbl.transfer','tbl.merge','tbl.split','rep.viewSales','rep.export','sys.backup'])};
+    'tbl.transfer','tbl.merge','tbl.split','rep.viewSales','rep.export','sys.backup',
+    'nav.khata','khata.view','khata.collect','khata.editCustomer','pay.credit'])};
   r.cashier={id:'cashier',name:'Cashier',emoji:'💵',builtin:true,perms:only([
     'nav.tables','nav.billing','nav.orders','nav.kot','nav.parcel',
     'bill.create','bill.edit','bill.reprint','bill.duplicate','bill.discount','bill.roundoff',
     'pay.cash','pay.card','pay.upi','pay.wallet','pay.changeMode',
-    'kot.generate','kot.reprint','tbl.transfer'])};
+    'kot.generate','kot.reprint','tbl.transfer',
+    'nav.khata','khata.view','khata.collect','pay.credit'])};
   r.waiter={id:'waiter',name:'Waiter',emoji:'🧑‍🍳',builtin:true,perms:only([
     'nav.tables','nav.kot','nav.parcel','bill.create','kot.generate','tbl.transfer'])};
   r.kitchen={id:'kitchen',name:'Kitchen',emoji:'🍳',builtin:true,perms:only([
@@ -15274,6 +15281,528 @@ if(typeof window.onShow==='function'){
 }
 setTimeout(injectCostField,1900);
 console.log('💼 [v29c] Owner dashboard + cost field ready');
+})();
+</script>
+
+<!-- v29 PHASE 1 — Due/Khata system -->
+<style>
+/* v29 khata styles */
+.ja29-pkrow{display:flex;align-items:center;gap:8px;padding:9px 10px;border-bottom:1px solid var(--line,#dde8e3);cursor:pointer;border-radius:8px;font-size:13px}
+.ja29-pkrow:hover{background:var(--soft,#f5f8f6)}
+#ja29-due-seg.on{background:#b7791f;color:#fff;border-color:#b7791f}
+</style>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   v29 PHASE 1 — DUE / KHATA (customer credit account) SYSTEM
+   Stores: ja29_customers, ja29_payments (naye keys — purane untouched)
+   Billing me teesra option "Udhaar", Khata Book page, collection +
+   receipt, reports card, JASEC guards + audit logging.
+   Collection behavior: payment balance kam karta hai; balance 0 hote
+   hi us customer ke SAB Due bills 'Paid' ho jaate hain; agar amount
+   EXACTLY kisi ek due bill ke barabar ho to sirf wahi bill Paid hota
+   hai. (Owner se confirm karna hai — summary me note.)
+   ═══════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+if(window.JAKHATA) return;
+
+var K_CUST='ja29_customers', K_PAY='ja29_payments';
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function rupee(n){ return '₹'+Math.round(n||0).toLocaleString('en-IN'); }
+function sToast(m,t){ try{ if(typeof toast==='function'){ toast(m,t); return; } }catch(e){} }
+function LSget(k,d){ try{ var v=JSON.parse(localStorage.getItem(k)); return v==null?d:v; }catch(e){ return d; } }
+function LSset(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+function customers(){ return LSget(K_CUST,[]); }
+function saveCustomers(c){ LSset(K_CUST,c); }
+function payments(){ return LSget(K_PAY,[]); }
+function savePayments(p){ LSset(K_PAY,p); }
+function findCust(id){ return customers().find(function(c){ return c.id===id; }); }
+function can(p){ return !window.JASEC || JASEC.can(p); }
+function slog(a,o){ try{ if(window.JASEC) JASEC.log(a,o); }catch(e){} }
+function tdy(){ try{ return (typeof today==='function')?today():''; }catch(e){ return ''; } }
+
+/* ══ customer CRUD ══ */
+function addCustomer(name,phone,address,creditLimit){
+  name=String(name||'').trim(); phone=String(phone||'').trim();
+  if(!name) return {err:'Naam daalo'};
+  if(!phone) return {err:'Phone daalo'};
+  var list=customers();
+  if(list.some(function(c){ return c.phone===phone; })) return {err:'Ye phone number pehle se hai'};
+  var c={id:'kc'+Date.now().toString(36),name:name,phone:phone,address:String(address||'').trim(),
+         creditLimit:parseFloat(creditLimit)||0,totalDue:0,createdAt:Date.now()};
+  list.push(c); saveCustomers(list);
+  slog('Khata Customer Added',{detail:name+' ('+phone+')',skipReason:true});
+  return {ok:c};
+}
+
+/* ══ BILLING: "Udhaar" pay option ══ */
+var dueCust=null;   /* {id,name} jab Udhaar selected */
+function injectDueSeg(){
+  if(document.getElementById('ja29-due-seg')) return;
+  var cashSeg=document.querySelector('.seg[data-pay="Cash"]');
+  if(!cashSeg||!cashSeg.parentNode) return;
+  var b=document.createElement('button');
+  b.type='button'; b.className='seg'; b.id='ja29-due-seg';
+  b.textContent='📒 Udhaar';
+  b.onclick=function(){ openPicker(); };
+  cashSeg.parentNode.appendChild(b);
+}
+function setDueSegUI(on){
+  var b=document.getElementById('ja29-due-seg'); if(!b) return;
+  b.classList.toggle('on',!!on);
+  b.textContent=on&&dueCust?('📒 '+dueCust.name.split(' ')[0]):'📒 Udhaar';
+}
+function clearDueMode(){
+  dueCust=null; setDueSegUI(false);
+}
+if(typeof window.setPay==='function'){
+  var _prevSetPay=window.setPay;
+  window.setPay=function(el){
+    clearDueMode();
+    return _prevSetPay.apply(this,arguments);
+  };
+}
+
+/* picker modal */
+function openPicker(cb){
+  if(!can('pay.credit')){ sToast('🚫 Udhaar dene ki permission nahi','error'); return; }
+  var ov=document.getElementById('ja29-picker');
+  if(ov) ov.remove();
+  ov=document.createElement('div');
+  ov.id='ja29-picker'; ov.className='jasec-ov show';
+  ov.innerHTML='<div class="jasec-gcard" style="width:min(430px,94vw);max-height:84vh;overflow-y:auto">'+
+    '<div class="jasec-gtop"><span class="jasec-gicon">📒</span><div><div class="jasec-gtitle">Khata Customer chuno</div>'+
+    '<div class="jasec-gsub">Bina customer ke Udhaar bill nahi banega</div></div></div>'+
+    '<input type="text" class="jasec-inp" id="ja29-pk-q" placeholder="🔍 Naam ya phone se dhundo…" autocomplete="off">'+
+    '<div id="ja29-pk-list" style="max-height:200px;overflow-y:auto;margin:6px 0"></div>'+
+    '<details id="ja29-pk-new"><summary style="cursor:pointer;font-weight:800;font-size:12.5px;color:var(--brand,#077a57)">➕ Naya Customer</summary>'+
+      '<input type="text" class="jasec-inp" id="ja29-nc-name" placeholder="Naam *">'+
+      '<input type="tel" class="jasec-inp" id="ja29-nc-phone" placeholder="Phone *" inputmode="numeric">'+
+      '<input type="text" class="jasec-inp" id="ja29-nc-addr" placeholder="Address (optional)">'+
+      '<input type="number" class="jasec-inp" id="ja29-nc-limit" placeholder="Credit limit ₹ (0 = no limit)">'+
+      '<button type="button" class="jasec-btn jasec-btn-brand" onclick="JAKHATA._newCust()">➕ Add &amp; Select</button>'+
+    '</details>'+
+    '<div class="jasec-aerr" id="ja29-pk-err">&nbsp;</div>'+
+    '<div class="jasec-arow"><button type="button" class="jasec-btn jasec-btn-ghost" onclick="JAKHATA._pkClose()">Cancel</button></div>'+
+    '</div>';
+  document.body.appendChild(ov);
+  window.__ja29PickCb=cb||null;
+  var q=document.getElementById('ja29-pk-q');
+  q.oninput=function(){ renderPickList(q.value); };
+  renderPickList('');
+  setTimeout(function(){ q.focus(); },80);
+}
+function renderPickList(q){
+  var el=document.getElementById('ja29-pk-list'); if(!el) return;
+  q=String(q||'').toLowerCase();
+  var list=customers().filter(function(c){
+    return !q || c.name.toLowerCase().indexOf(q)>=0 || String(c.phone).indexOf(q)>=0;
+  }).slice(0,30);
+  if(!list.length){ el.innerHTML='<div class="jasec-sm" style="padding:8px">Koi customer nahi mila — neeche se naya add karo</div>'; return; }
+  el.innerHTML=list.map(function(c){
+    return '<div class="ja29-pkrow" onclick="JAKHATA._pick(\''+esc(c.id)+'\')">'+
+      '<b>'+esc(c.name)+'</b> <span class="jasec-sm">'+esc(c.phone)+'</span>'+
+      '<span style="margin-left:auto;font-weight:800;color:'+((c.totalDue||0)>0?'#b7791f':'#1d9e6f')+'">'+rupee(c.totalDue||0)+'</span>'+
+      (c.creditLimit>0?('<span class="jasec-sm"> / limit '+rupee(c.creditLimit)+'</span>'):'')+
+      '</div>';
+  }).join('');
+}
+function pkClose(){ var ov=document.getElementById('ja29-picker'); if(ov) ov.remove(); window.__ja29PickCb=null; }
+function pick(id){
+  var c=findCust(id); if(!c) return;
+  var cb=window.__ja29PickCb;
+  pkClose();
+  if(typeof cb==='function'){ cb(c); return; }
+  /* billing due mode */
+  dueCust={id:c.id,name:c.name};
+  try{ state.stat='Due';
+    document.querySelectorAll('.seg[data-stat]').forEach(function(x){ x.classList.toggle('on',x.getAttribute('data-stat')==='Due'); });
+    document.querySelectorAll('.seg[data-pay]').forEach(function(x){ x.classList.remove('on'); });
+  }catch(e){}
+  setDueSegUI(true);
+  sToast('📒 Udhaar bill — '+c.name+((c.totalDue||0)>0?(' (abhi baaki: '+rupee(c.totalDue)+')'):''),'info');
+}
+function newCust(){
+  var r=addCustomer((document.getElementById('ja29-nc-name')||{}).value,
+                    (document.getElementById('ja29-nc-phone')||{}).value,
+                    (document.getElementById('ja29-nc-addr')||{}).value,
+                    (document.getElementById('ja29-nc-limit')||{}).value);
+  if(r.err){ var e=document.getElementById('ja29-pk-err'); if(e) e.textContent='❌ '+r.err; return; }
+  pick(r.ok.id);
+}
+
+/* placeOrder wrap: limit check (pehle) + due tagging (baad) */
+if(typeof window.placeOrder==='function'){
+  var _prevPlace29=window.placeOrder;
+  window.placeOrder=function(doPrint){
+    var self=this,args=arguments;
+    if(!dueCust) return _prevPlace29.apply(self,args);
+    var c=findCust(dueCust.id);
+    if(!c){ clearDueMode(); return _prevPlace29.apply(self,args); }
+    var cartTotal=0;
+    try{ cartTotal=state.cart.reduce(function(s,x){ return s+x.price*x.qty; },0); }catch(e){}
+    if(!cartTotal) return _prevPlace29.apply(self,args);
+    var run=function(){
+      var cust=findCust(dueCust.id); if(!cust){ clearDueMode(); return _prevPlace29.apply(self,args); }
+      var prevCount=0; try{ prevCount=state.counter; }catch(e){}
+      try{ state.stat='Due'; }catch(e){}
+      var r=_prevPlace29.apply(self,args);
+      try{
+        if(state.counter>prevCount){
+          var o=state.orders[0];
+          if(o){
+            o.status='Due'; o.customerId=cust.id; o.customerName=cust.name;
+            var list=customers(); var cc=list.find(function(x){ return x.id===cust.id; });
+            if(cc){ cc.totalDue=(cc.totalDue||0)+(o.total||0); saveCustomers(list); }
+            save();
+            slog('Due Bill Created',{detail:o.id+' · '+rupee(o.total)+' · '+cust.name,newV:rupee((cc?cc.totalDue:0)),skipReason:true});
+            sToast('📒 '+rupee(o.total)+' '+cust.name+' ke khate me — total baaki '+rupee(cc?cc.totalDue:0),'success');
+          }
+        }
+      }catch(e){}
+      clearDueMode();
+      return r;
+    };
+    if(c.creditLimit>0 && ((c.totalDue||0)+cartTotal)>c.creditLimit && window.JASEC){
+      JASEC.guard('pay.creditOverLimit',{
+        title:'Credit Limit Cross — '+c.name,
+        detail:'Baaki '+rupee(c.totalDue)+' + naya bill '+rupee(cartTotal)+' > limit '+rupee(c.creditLimit),
+        oldV:'limit '+rupee(c.creditLimit), newV:rupee((c.totalDue||0)+cartTotal)
+      },run);
+      return;
+    }
+    return run();
+  };
+}
+
+/* ══ KHATA BOOK page ══ */
+var view={custId:null};
+function injectPage(){
+  if(document.getElementById('pg-khata')) return;
+  var settingsPg=document.getElementById('pg-settings'); if(!settingsPg||!settingsPg.parentNode) return;
+  var pg=document.createElement('div');
+  pg.id='pg-khata'; pg.className='page';
+  pg.innerHTML='<div class="wrap"><div id="ja29-khata-body"></div></div>';
+  settingsPg.parentNode.insertBefore(pg,settingsPg);
+  var ordersBtn=document.querySelector('.nav button[data-pg="orders"]');
+  if(ordersBtn && !document.querySelector('.nav button[data-pg="khata"]')){
+    var b=document.createElement('button');
+    b.setAttribute('data-pg','khata');
+    b.innerHTML='📒 <span>Khata</span>';
+    b.onclick=function(){ if(typeof nav==='function') nav(this); };
+    ordersBtn.parentNode.insertBefore(b,ordersBtn.nextSibling);
+    if(window.jaRole==='mobile') b.style.display='none';
+  }
+}
+function renderKhata(){
+  var el=document.getElementById('ja29-khata-body'); if(!el) return;
+  if(!can('khata.view')){ el.innerHTML='<div class="jasec-card jasec-sm">🚫 Khata dekhne ki permission nahi</div>'; return; }
+  if(view.custId){ renderCustDetail(el); return; }
+  var list=customers().slice().sort(function(a,b){ return (b.totalDue||0)-(a.totalDue||0); });
+  var showAll=!!view.showAll;
+  var withDue=list.filter(function(c){ return (c.totalDue||0)>0; });
+  var totalOut=withDue.reduce(function(s,c){ return s+(c.totalDue||0); },0);
+  var shown=showAll?list:withDue;
+  el.innerHTML=
+    '<div class="jasec-card" style="border-left:4px solid #b7791f">'+
+      '<h3>📒 Khata Book <span class="jasec-sm">(udhaar accounts)</span></h3>'+
+      '<div class="jasec-tiles" style="margin-bottom:8px">'+
+        '<div class="jasec-tile"><div class="v" style="color:#b7791f">'+rupee(totalOut)+'</div><div class="l">Total Baaki</div></div>'+
+        '<div class="jasec-tile"><div class="v">'+withDue.length+'</div><div class="l">Udhaar Customers</div></div>'+
+        '<div class="jasec-tile"><div class="v">'+list.length+'</div><div class="l">Total Customers</div></div>'+
+      '</div>'+
+      '<div class="jasec-inline" style="margin-bottom:8px">'+
+        '<button type="button" class="jasec-btn jasec-btn-brand" onclick="JAKHATA._openAdd()">➕ Naya Customer</button>'+
+        '<button type="button" class="jasec-btn jasec-btn-ghost" onclick="JAKHATA._toggleAll()">'+(showAll?'Sirf baaki wale':'Sab customers dikhao')+'</button>'+
+        '<input type="text" class="jasec-inp" id="ja29-kb-q" placeholder="🔍 Search…" style="max-width:200px;margin:0" oninput="JAKHATA._filter(this.value)">'+
+      '</div>'+
+      '<div id="ja29-kb-list">'+custRows(shown)+'</div>'+
+    '</div>';
+}
+function custRows(list){
+  if(!list.length) return '<div class="jasec-sm" style="padding:10px">Koi udhaar baaki nahi 🎉</div>';
+  return '<table class="jasec-tbl"><tr><th>Customer</th><th>Phone</th><th>Baaki</th><th>Limit</th><th></th></tr>'+
+    list.map(function(c){
+      return '<tr style="cursor:pointer" onclick="JAKHATA._open(\''+esc(c.id)+'\')">'+
+        '<td><b>'+esc(c.name)+'</b></td><td>'+esc(c.phone)+'</td>'+
+        '<td style="font-weight:900;color:'+((c.totalDue||0)>0?'#b7791f':'#1d9e6f')+'">'+rupee(c.totalDue||0)+'</td>'+
+        '<td class="jasec-sm">'+(c.creditLimit>0?rupee(c.creditLimit):'—')+'</td>'+
+        '<td><button type="button" class="jasec-btn jasec-btn-brand" style="padding:6px 12px;font-size:11px" onclick="event.stopPropagation();JAKHATA._collect(\''+esc(c.id)+'\')">💰 Collect</button></td></tr>';
+    }).join('')+'</table>';
+}
+function custDueOrders(cid){
+  try{ return state.orders.filter(function(o){ return o.customerId===cid && o.status==='Due'; }); }catch(e){ return []; }
+}
+function renderCustDetail(el){
+  var c=findCust(view.custId);
+  if(!c){ view.custId=null; renderKhata(); return; }
+  var dues=custDueOrders(c.id);
+  var pays=payments().filter(function(p){ return p.customerId===c.id; }).slice(-15).reverse();
+  el.innerHTML=
+    '<div class="jasec-card">'+
+      '<div class="jasec-inline" style="margin-bottom:10px">'+
+        '<button type="button" class="jasec-btn jasec-btn-ghost" onclick="JAKHATA._back()">← Khata Book</button>'+
+        '<h3 style="margin:0">📒 '+esc(c.name)+' <span class="jasec-sm">'+esc(c.phone)+(c.address?(' · '+esc(c.address)):'')+'</span></h3>'+
+      '</div>'+
+      '<div class="jasec-tiles">'+
+        '<div class="jasec-tile"><div class="v" style="color:#b7791f">'+rupee(c.totalDue||0)+'</div><div class="l">Baaki</div></div>'+
+        '<div class="jasec-tile"><div class="v">'+(c.creditLimit>0?rupee(c.creditLimit):'—')+'</div><div class="l">Credit Limit</div></div>'+
+        '<div class="jasec-tile"><div class="v">'+dues.length+'</div><div class="l">Due Bills</div></div>'+
+      '</div>'+
+      '<div class="jasec-inline" style="margin:8px 0">'+
+        '<button type="button" class="jasec-btn jasec-btn-brand" onclick="JAKHATA._collect(\''+esc(c.id)+'\')">💰 Collect Payment</button>'+
+        '<button type="button" class="jasec-btn jasec-btn-ghost" onclick="JAKHATA._edit(\''+esc(c.id)+'\')">✏️ Edit</button>'+
+        '<button type="button" class="jasec-btn jasec-btn-ghost" onclick="JAKHATA._waive(\''+esc(c.id)+'\')">🧾 Adjust/Waive (PIN)</button>'+
+        '<button type="button" class="jasec-btn jasec-btn-red" onclick="JAKHATA._del(\''+esc(c.id)+'\')">🗑️ Delete (PIN)</button>'+
+      '</div>'+
+      '<h3 style="margin-top:14px">Due Bills</h3>'+
+      (dues.length?('<table class="jasec-tbl"><tr><th>Bill</th><th>Date</th><th>Table</th><th>Amount</th><th>Din</th></tr>'+
+        dues.map(function(o){
+          var days=Math.floor((Date.now()-(o.ts||Date.parse(o.date)))/86400000);
+          return '<tr><td><b>'+esc(o.id)+'</b></td><td>'+esc(o.date)+'</td><td>'+esc(o.train||'-')+'</td>'+
+            '<td style="font-weight:800">'+rupee(o.total)+'</td>'+
+            '<td style="color:'+(days>30?'#d43c3c':'inherit')+';font-weight:'+(days>30?'900':'400')+'">'+days+'d'+(days>30?' ⚠️':'')+'</td></tr>';
+        }).join('')+'</table>'):'<div class="jasec-sm">Koi due bill nahi</div>')+
+      '<h3 style="margin-top:14px">Payment History</h3>'+
+      (pays.length?('<table class="jasec-tbl"><tr><th>Kab</th><th>Amount</th><th>Method</th><th>Note</th></tr>'+
+        pays.map(function(p){
+          return '<tr><td>'+esc(new Date(p.ts).toLocaleString('en-IN'))+'</td><td style="font-weight:800;color:#1d9e6f">'+rupee(p.amount)+'</td>'+
+            '<td>'+esc(p.method)+'</td><td class="jasec-sm">'+esc(p.note||'')+'</td></tr>';
+        }).join('')+'</table>'):'<div class="jasec-sm">Abhi koi payment nahi</div>')+
+    '</div>';
+}
+
+/* ══ collect payment ══ */
+function openCollect(cid){
+  if(!can('khata.collect')){ sToast('🚫 Collection permission nahi','error'); return; }
+  var c=findCust(cid); if(!c) return;
+  var ov=document.getElementById('ja29-collect'); if(ov) ov.remove();
+  ov=document.createElement('div');
+  ov.id='ja29-collect'; ov.className='jasec-ov show';
+  ov.innerHTML='<div class="jasec-gcard" style="width:min(380px,94vw)">'+
+    '<div class="jasec-gtop"><span class="jasec-gicon">💰</span><div><div class="jasec-gtitle">Collect — '+esc(c.name)+'</div>'+
+    '<div class="jasec-gsub">Baaki: <b>'+rupee(c.totalDue||0)+'</b></div></div></div>'+
+    '<label class="jasec-glbl">Amount ₹ (partial chalega)</label>'+
+    '<input type="number" class="jasec-inp" id="ja29-cl-amt" value="'+Math.round(c.totalDue||0)+'" min="1">'+
+    '<label class="jasec-glbl">Method</label>'+
+    '<div class="jasec-arow" style="justify-content:flex-start">'+
+      '<label class="jasec-chk"><input type="radio" name="ja29clm" value="Cash" checked> 💵 Cash</label>'+
+      '<label class="jasec-chk"><input type="radio" name="ja29clm" value="Online"> 📲 Online</label>'+
+    '</div>'+
+    '<input type="text" class="jasec-inp" id="ja29-cl-note" placeholder="Note (optional)">'+
+    '<div class="jasec-aerr" id="ja29-cl-err">&nbsp;</div>'+
+    '<div class="jasec-arow">'+
+      '<button type="button" class="jasec-btn jasec-btn-ghost" onclick="document.getElementById(\'ja29-collect\').remove()">Cancel</button>'+
+      '<button type="button" class="jasec-btn jasec-btn-brand" onclick="JAKHATA._collectGo(\''+esc(c.id)+'\')">✅ Collect &amp; Receipt</button>'+
+    '</div></div>';
+  document.body.appendChild(ov);
+}
+function collectGo(cid){
+  var c=findCust(cid); if(!c) return;
+  var amt=parseFloat((document.getElementById('ja29-cl-amt')||{}).value)||0;
+  var mEl=document.querySelector('input[name="ja29clm"]:checked');
+  var method=mEl?mEl.value:'Cash';
+  var note=(document.getElementById('ja29-cl-note')||{}).value||'';
+  if(amt<=0){ document.getElementById('ja29-cl-err').textContent='❌ Sahi amount daalo'; return; }
+  if(amt>(c.totalDue||0)){ document.getElementById('ja29-cl-err').textContent='❌ Baaki se zyada hai ('+rupee(c.totalDue)+')'; return; }
+  var list=customers(); var cc=list.find(function(x){ return x.id===cid; }); if(!cc) return;
+  var oldDue=cc.totalDue||0;
+  cc.totalDue=Math.max(0,oldDue-amt);
+  saveCustomers(list);
+  var pay={id:'kp'+Date.now().toString(36),customerId:cid,amount:amt,method:method,ts:Date.now(),note:note,by:(window.JASEC?JASEC.currentUser().name:'')};
+  var plist=payments(); plist.push(pay); savePayments(plist);
+  /* bills settle: balance 0 → sab Due bills Paid; exact ek bill match → wahi bill Paid */
+  var dues=custDueOrders(cid), closed=[];
+  try{
+    if(cc.totalDue===0){
+      dues.forEach(function(o){ o.status='Paid'; o.history=o.history||[]; o.history.push('Khata settled '+new Date().toLocaleString('en-IN')); closed.push(o.id); });
+      save();
+    } else {
+      var exact=dues.find(function(o){ return Math.round(o.total)===Math.round(amt); });
+      if(exact){ exact.status='Paid'; exact.history=exact.history||[]; exact.history.push('Khata payment '+new Date().toLocaleString('en-IN')); closed.push(exact.id); save(); }
+    }
+  }catch(e){}
+  slog('Khata Payment Collected',{detail:c.name+' · '+rupee(amt)+' ('+method+')'+(closed.length?(' · settled: '+closed.join(',')):''),
+       oldV:rupee(oldDue),newV:rupee(cc.totalDue),skipReason:true});
+  var ov=document.getElementById('ja29-collect'); if(ov) ov.remove();
+  sToast('✅ '+rupee(amt)+' collect — baaki '+rupee(cc.totalDue),'success');
+  printReceipt(c,pay,cc.totalDue,closed);
+  renderKhata();
+}
+
+/* payment receipt (32-col, existing print pipeline: LAN /api/print else popup) */
+function rline(ch){ return new Array(33).join(ch||'-'); }
+function rcenter(s){ s=String(s); if(s.length>=32) return s.slice(0,32); var p=Math.floor((32-s.length)/2); return new Array(p+1).join(' ')+s; }
+function rrow(l,r){ l=String(l);r=String(r); if(l.length+r.length>=32) l=l.slice(0,32-r.length-1); return l+new Array(32-l.length-r.length+1).join(' ')+r; }
+function shopName2(){ try{ var b=JSON.parse(localStorage.getItem('ja3_bset')||'{}'); return b.name||b.shop||'Jay Ambe Fast Food'; }catch(e){ return 'Jay Ambe Fast Food'; } }
+function printReceipt(cust,pay,newBal,closed){
+  var t=[];
+  t.push(rline('*')); t.push(rcenter(shopName2())); t.push(rcenter('PAYMENT RECEIPT')); t.push(rline('*'));
+  t.push(rrow('Customer:',cust.name.slice(0,20)));
+  t.push(rrow('Phone:',cust.phone));
+  t.push(rrow('Date:',new Date(pay.ts).toLocaleString('en-IN',{dateStyle:'short',timeStyle:'short'})));
+  t.push(rline('-'));
+  t.push(rrow('PAID ('+pay.method+')',Math.round(pay.amount).toString()));
+  if(closed&&closed.length) t.push('Bills settled: '+closed.join(','));
+  t.push(rrow('Baaki balance',Math.round(newBal).toString()));
+  t.push(rline('-')); t.push(rcenter('Dhanyavaad! Jai Ambe')); t.push(rline('*')); t.push('');
+  var content=t.join('\n');
+  if(/^https?:$/.test(location.protocol)){
+    var printer='';
+    try{ var pro=JSON.parse(localStorage.getItem('ja29_printcfg')||'{}'); if(pro.on) printer=pro.def||''; }catch(e){}
+    try{ if(!printer){ var m=JSON.parse(localStorage.getItem('ja_v28_printmap')||'{}'); printer=m.bill||''; } }catch(e2){}
+    if(printer){
+      fetch('/api/print',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({printer:printer,content:content,copies:1})}).catch(function(){});
+      return;
+    }
+  }
+  try{
+    var w=window.open('','_blank','width=320,height=480');
+    if(w){ w.document.write('<pre style="font-family:monospace;font-size:12px">'+content.replace(/</g,'&lt;')+'</pre>');
+      w.document.close(); w.print(); }
+  }catch(e){}
+}
+
+/* ══ edit / waive / delete (guards) ══ */
+function editCust(cid){
+  if(!can('khata.editCustomer')){ sToast('🚫 Edit permission nahi','error'); return; }
+  var list=customers(); var c=list.find(function(x){ return x.id===cid; }); if(!c) return;
+  var name=prompt('Naam:',c.name); if(name===null) return;
+  var phone=prompt('Phone:',c.phone); if(phone===null) return;
+  if(list.some(function(x){ return x.id!==cid && x.phone===String(phone).trim(); })){ sToast('❌ Ye phone kisi aur ka hai','error'); return; }
+  var addr=prompt('Address:',c.address||''); if(addr===null) return;
+  var lim=prompt('Credit limit ₹ (0 = no limit):',c.creditLimit||0); if(lim===null) return;
+  c.name=String(name).trim()||c.name; c.phone=String(phone).trim()||c.phone;
+  c.address=String(addr).trim(); c.creditLimit=parseFloat(lim)||0;
+  saveCustomers(list);
+  slog('Khata Customer Edited',{detail:c.name,skipReason:true});
+  renderKhata();
+}
+function waive(cid){
+  var c=findCust(cid); if(!c||!window.JASEC) return;
+  JASEC.guard('khata.waive',{
+    title:'Adjust/Waive Due — '+c.name,
+    detail:'Abhi baaki: '+rupee(c.totalDue||0)+'. Ye REAL payment nahi hai — sirf balance adjust hota hai.'
+  },function(){
+    var v=prompt('Naya balance ₹ (abhi '+Math.round(c.totalDue||0)+'):',Math.round(c.totalDue||0));
+    if(v===null) return;
+    var nv=parseFloat(v); if(isNaN(nv)||nv<0){ sToast('❌ Galat amount','error'); return; }
+    var list=customers(); var cc=list.find(function(x){ return x.id===cid; }); if(!cc) return;
+    var old=cc.totalDue||0;
+    cc.totalDue=nv; saveCustomers(list);
+    if(nv===0){ try{ custDueOrders(cid).forEach(function(o){ o.status='Paid'; o.history=o.history||[]; o.history.push('Due waived '+new Date().toLocaleString('en-IN')); }); save(); }catch(e){} }
+    slog('Khata Due Waived/Adjusted',{detail:c.name,oldV:rupee(old),newV:rupee(nv),skipReason:true});
+    sToast('🧾 Balance adjust: '+rupee(old)+' → '+rupee(nv),'info');
+    renderKhata();
+  });
+}
+function delCust(cid){
+  var c=findCust(cid); if(!c||!window.JASEC) return;
+  JASEC.guard('khata.deleteCustomer',{
+    title:'Delete Khata Customer — '+c.name,
+    detail:'Baaki '+rupee(c.totalDue||0)+' hai. Customer trash me jayega (recoverable).'
+  },function(){
+    JASEC.toTrash('khataCustomer',c.name+' ('+c.phone+') — due '+rupee(c.totalDue||0),c);
+    saveCustomers(customers().filter(function(x){ return x.id!==cid; }));
+    slog('Khata Customer Deleted',{detail:c.name+' · due tha '+rupee(c.totalDue||0),skipReason:true});
+    view.custId=null;
+    sToast('🗑️ Customer trash me gaya','info');
+    renderKhata();
+  });
+}
+
+/* ══ Reports card ══ */
+function injectReportCard(){
+  var pg=document.getElementById('pg-reports');
+  if(!pg) return;
+  var wrap=pg.querySelector('.wrap')||pg;
+  var host=document.getElementById('ja29-khata-report');
+  if(!host){
+    host=document.createElement('div');
+    host.id='ja29-khata-report';
+    wrap.appendChild(host);
+  }
+  var list=customers().filter(function(c){ return (c.totalDue||0)>0; }).sort(function(a,b){ return b.totalDue-a.totalDue; });
+  var total=list.reduce(function(s,c){ return s+c.totalDue; },0);
+  var aging=[];
+  try{
+    state.orders.filter(function(o){ return o.status==='Due' && o.customerId; }).forEach(function(o){
+      var days=Math.floor((Date.now()-(o.ts||Date.parse(o.date)))/86400000);
+      aging.push({id:o.id,cust:o.customerName||'',amt:o.total,days:days});
+    });
+  }catch(e){}
+  aging.sort(function(a,b){ return b.days-a.days; });
+  host.innerHTML=
+    '<div class="jasec-card" style="border-left:4px solid #b7791f;margin-top:14px">'+
+    '<h3>📒 Due / Khata Report</h3>'+
+    '<div class="jasec-tiles">'+
+      '<div class="jasec-tile"><div class="v" style="color:#b7791f">'+rupee(total)+'</div><div class="l">Total Outstanding</div></div>'+
+      '<div class="jasec-tile"><div class="v">'+list.length+'</div><div class="l">Customers Baaki</div></div>'+
+      '<div class="jasec-tile"><div class="v" style="color:'+(aging.some(function(a){return a.days>30;})?'#d43c3c':'#1d9e6f')+'">'+aging.filter(function(a){return a.days>30;}).length+'</div><div class="l">Bills &gt;30 din</div></div>'+
+    '</div>'+
+    '<h3 style="margin-top:10px">Top 10 — sabse zyada baaki</h3>'+
+    (list.length?('<table class="jasec-tbl"><tr><th>#</th><th>Customer</th><th>Phone</th><th>Baaki</th></tr>'+
+      list.slice(0,10).map(function(c,i){
+        return '<tr><td>'+(i+1)+'</td><td><b>'+esc(c.name)+'</b></td><td>'+esc(c.phone)+'</td><td style="font-weight:900;color:#b7791f">'+rupee(c.totalDue)+'</td></tr>';
+      }).join('')+'</table>'):'<div class="jasec-sm">Koi baaki nahi 🎉</div>')+
+    '<h3 style="margin-top:10px">Due Aging</h3>'+
+    (aging.length?('<table class="jasec-tbl"><tr><th>Bill</th><th>Customer</th><th>Amount</th><th>Din</th></tr>'+
+      aging.slice(0,15).map(function(a){
+        return '<tr'+(a.days>30?' style="background:#fdf0ef"':'')+'><td>'+esc(a.id)+'</td><td>'+esc(a.cust)+'</td><td>'+rupee(a.amt)+'</td>'+
+          '<td style="font-weight:800;color:'+(a.days>30?'#d43c3c':'inherit')+'">'+a.days+' din'+(a.days>30?' ⚠️':'')+'</td></tr>';
+      }).join('')+'</table>'):'<div class="jasec-sm">Koi due bill nahi</div>')+
+    '</div>';
+}
+
+/* ══ public API + hooks ══ */
+window.JAKHATA={
+  customers:customers, payments:payments, addCustomer:addCustomer, openPicker:openPicker,
+  _pick:pick, _pkClose:pkClose, _newCust:newCust, _filter:function(q){
+    var el=document.getElementById('ja29-kb-list'); if(!el) return;
+    q=String(q||'').toLowerCase();
+    var list=customers().filter(function(c){ return (view.showAll||((c.totalDue||0)>0)) && (!q||c.name.toLowerCase().indexOf(q)>=0||String(c.phone).indexOf(q)>=0); })
+      .sort(function(a,b){ return (b.totalDue||0)-(a.totalDue||0); });
+    el.innerHTML=custRows(list);
+  },
+  _open:function(id){ view.custId=id; renderKhata(); },
+  _back:function(){ view.custId=null; renderKhata(); },
+  _toggleAll:function(){ view.showAll=!view.showAll; renderKhata(); },
+  _openAdd:function(){ openPicker(function(c){ view.custId=c.id; renderKhata(); }); },
+  _collect:openCollect, _collectGo:collectGo, _edit:editCust, _waive:waive, _del:delCust
+};
+
+if(typeof window.onShow==='function'){
+  var _prevShow=window.onShow;
+  window.onShow=function(pg){
+    var r=_prevShow.apply(this,arguments);
+    if(pg==='khata'){ view.custId=null; setTimeout(renderKhata,60); }
+    if(pg==='billing') setTimeout(injectDueSeg,120);
+    if(pg==='reports') setTimeout(injectReportCard,250);
+    return r;
+  };
+}
+/* trash restore support for khataCustomer type (JASEC restore custom types se anjaan hai) */
+if(window.JASEC && JASEC._p && JASEC._p.restore){
+  var _prevRestore=JASEC._p.restore;
+  JASEC._p.restore=function(id){
+    try{
+      var x=JASEC.trash().find(function(i){ return i.id===id; });
+      if(x && x.type==='khataCustomer'){
+        var list=customers();
+        if(!list.some(function(c){ return c.id===x.data.id; })){ list.push(x.data); saveCustomers(list); }
+        JASEC.saveTrash(JASEC.trash().filter(function(i){ return i.id!==id; }));
+        JASEC.log('Restored From Trash',{detail:'khataCustomer: '+x.label,skipReason:true});
+        sToast('♻️ Customer wapas aa gaya','success');
+        if(JASEC._p.rerender) JASEC._p.rerender();
+        return;
+      }
+    }catch(e){}
+    return _prevRestore.apply(this,arguments);
+  };
+}
+setTimeout(function(){ injectPage(); injectDueSeg(); },1500);
+console.log('📒 [v29-khata] Due/Khata system ready — customers: '+customers().length);
 })();
 </script>
 </body>
