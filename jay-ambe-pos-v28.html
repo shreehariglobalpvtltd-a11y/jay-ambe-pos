@@ -16375,5 +16375,193 @@ setTimeout(injectSettings,1900);
 console.log('🎉 [v29] Happy Hour ready ('+(cfg().on?'ON':'OFF')+', active now: '+isActive()+')');
 })();
 </script>
+
+<!-- v29 PHASE 4 — inventory/stock alerts -->
+<style>
+/* v29 inventory */
+.ja29-inv-alert{background:linear-gradient(90deg,#fff4e0,#ffe9c7);border:1px solid #e8b76a;color:#8a5a12;border-radius:12px;padding:10px 14px;font-size:13px;margin:0 0 12px;line-height:1.6}
+</style>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   v29 PHASE 4 — INVENTORY / STOCK ALERTS (lightweight)
+   Manual stock + low-stock dashboard banner. Auto-decrement DELIBERATELY
+   SKIPPED (see note) — kyunki ek dish me kai ingredients alag-alag maatra
+   me lagte hain (1 plate = ? kg), aur wo data abhi menu me nahi hai; galat
+   auto-minus se stock jhoota ho jaata. Isliye manual received/wastage/
+   correction + low-stock alert. Store: ja29_inventory. Stock edit guarded
+   (inv.stockEdit / inv.stockDelete) + audit logged.
+   ═══════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+if(window.JAINV) return;
+
+var K='ja29_inventory';
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function sToast(m,t){ try{ if(typeof toast==='function'){ toast(m,t); return; } }catch(e){} }
+function can(p){ return !window.JASEC || JASEC.can(p); }
+function slog(a,o){ try{ if(window.JASEC) JASEC.log(a,o); }catch(e){} }
+function items(){ try{ return JSON.parse(localStorage.getItem(K))||[]; }catch(e){ return []; } }
+function saveItems(a){ try{ localStorage.setItem(K,JSON.stringify(a)); }catch(e){} }
+function find(id){ return items().find(function(x){ return x.id===id; }); }
+function low(){ return items().filter(function(x){ return x.lowStockThreshold>0 && x.currentStock<=x.lowStockThreshold; }); }
+var UNITS=['kg','gram','ltr','ml','pcs','packet','dozen','plate'];
+
+function add(name,unit,stock,threshold){
+  name=String(name||'').trim(); if(!name) return {err:'Naam daalo'};
+  var a=items();
+  a.push({id:'inv'+Date.now().toString(36),name:name,unit:unit||'pcs',
+          currentStock:parseFloat(stock)||0,lowStockThreshold:parseFloat(threshold)||0,
+          linkedItemIds:[],createdAt:Date.now()});
+  saveItems(a);
+  slog('Stock Item Added',{detail:name+' ('+(unit||'pcs')+') · '+(parseFloat(stock)||0),skipReason:true});
+  return {ok:1};
+}
+
+/* ── page ── */
+function injectPage(){
+  if(document.getElementById('pg-inventory')) return;
+  var settingsPg=document.getElementById('pg-settings'); if(!settingsPg||!settingsPg.parentNode) return;
+  var pg=document.createElement('div');
+  pg.id='pg-inventory'; pg.className='page';
+  pg.innerHTML='<div class="wrap"><div id="ja29-inv-body"></div></div>';
+  settingsPg.parentNode.insertBefore(pg,settingsPg);
+  /* nav button after Menu */
+  var menuBtn=document.querySelector('.nav button[data-pg="menu"]');
+  if(menuBtn && !document.querySelector('.nav button[data-pg="inventory"]')){
+    var b=document.createElement('button');
+    b.setAttribute('data-pg','inventory');
+    b.innerHTML='📦 <span>Stock</span>';
+    b.onclick=function(){ if(typeof nav==='function') nav(this); };
+    menuBtn.parentNode.insertBefore(b,menuBtn.nextSibling);
+    if(window.jaRole==='mobile') b.style.display='none';
+  }
+}
+function render(){
+  var el=document.getElementById('ja29-inv-body'); if(!el) return;
+  var a=items(), lo=low();
+  el.innerHTML=
+    (lo.length?('<div class="ja29-inv-alert">⚠️ <b>'+lo.length+' item'+(lo.length>1?'s':'')+' kam ho gaye!</b> '+
+      lo.map(function(x){ return esc(x.name)+' ('+x.currentStock+' '+esc(x.unit)+')'; }).join(' · ')+'</div>'):'')+
+    '<div class="jasec-card">'+
+      '<h3>📦 Inventory / Stock</h3>'+
+      '<div class="jasec-inline" style="margin-bottom:10px;align-items:flex-end">'+
+        '<div><label class="jasec-glbl">Item</label><input type="text" class="jasec-inp" id="ja29-inv-name" placeholder="jaise Aata" style="margin:0;max-width:150px"></div>'+
+        '<div><label class="jasec-glbl">Unit</label><select class="jasec-select" id="ja29-inv-unit">'+UNITS.map(function(u){return '<option>'+u+'</option>';}).join('')+'</select></div>'+
+        '<div><label class="jasec-glbl">Stock</label><input type="number" class="jasec-inp" id="ja29-inv-stock" placeholder="0" style="margin:0;max-width:90px"></div>'+
+        '<div><label class="jasec-glbl">Low pe alert</label><input type="number" class="jasec-inp" id="ja29-inv-thr" placeholder="0" style="margin:0;max-width:90px"></div>'+
+        '<button type="button" class="jasec-btn jasec-btn-brand" onclick="JAINV._add()">➕ Add</button>'+
+      '</div>'+
+      (a.length?('<table class="jasec-tbl"><tr><th>Item</th><th>Stock</th><th>Alert&nbsp;pe</th><th>Status</th><th>Actions</th></tr>'+
+        a.map(function(x){
+          var isLow=x.lowStockThreshold>0 && x.currentStock<=x.lowStockThreshold;
+          return '<tr'+(isLow?' style="background:#fdf6ec"':'')+'><td><b>'+esc(x.name)+'</b></td>'+
+            '<td style="font-weight:800">'+x.currentStock+' <span class="jasec-sm">'+esc(x.unit)+'</span></td>'+
+            '<td class="jasec-sm">'+(x.lowStockThreshold>0?x.lowStockThreshold:'—')+'</td>'+
+            '<td>'+(isLow?'<span class="jasec-pill jasec-pill-amber">LOW ⚠️</span>':'<span class="jasec-pill jasec-pill-green">OK</span>')+'</td>'+
+            '<td class="jasec-inline">'+
+              '<button type="button" class="jasec-btn jasec-btn-ghost" style="padding:5px 10px;font-size:11px" onclick="JAINV._adjust(\''+esc(x.id)+'\',1)">➕ Aaya</button>'+
+              '<button type="button" class="jasec-btn jasec-btn-ghost" style="padding:5px 10px;font-size:11px" onclick="JAINV._adjust(\''+esc(x.id)+'\',-1)">➖ Kharch/Wastage</button>'+
+              '<button type="button" class="jasec-btn jasec-btn-ghost" style="padding:5px 10px;font-size:11px" onclick="JAINV._editThr(\''+esc(x.id)+'\')">🔔</button>'+
+              '<button type="button" class="jasec-btn jasec-btn-red" style="padding:5px 10px;font-size:11px" onclick="JAINV._del(\''+esc(x.id)+'\')">🗑️</button>'+
+            '</td></tr>';
+        }).join('')+'</table>'):'<div class="jasec-sm">Abhi koi stock item nahi — upar se add karo</div>')+
+      '<p class="jasec-sm" style="margin-top:10px">💡 Auto stock-minus abhi OFF hai (har dish me alag ingredients alag maatra me lagte hain — galat minus se stock jhoota ho jaata). Received/wastage manually update karo.</p>'+
+    '</div>';
+}
+function adjust(id,dir){
+  if(!can('inv.stockEdit')){ sToast('🚫 Stock edit permission nahi','error'); return; }
+  var it=find(id); if(!it) return;
+  var word=dir>0?'aaya (received)':'kharch/wastage';
+  var v=prompt('Kitna '+word+'? ('+it.name+', unit '+it.unit+')');
+  if(v===null) return;
+  var qty=parseFloat(v); if(isNaN(qty)||qty<=0){ sToast('❌ Sahi number daalo','error'); return; }
+  var reason=prompt('Reason (zaroori):', dir>0?'Naya maal aaya':'Kitchen use / wastage');
+  if(!reason){ sToast('❌ Reason zaroori hai','error'); return; }
+  var a=items(), item=a.find(function(x){ return x.id===id; });
+  var old=item.currentStock;
+  item.currentStock=Math.max(0, old + dir*qty);
+  saveItems(a);
+  slog('Stock '+(dir>0?'Received':'Reduced'),{detail:item.name+' '+(dir>0?'+':'-')+qty+' '+item.unit,
+       oldV:old+' '+item.unit, newV:item.currentStock+' '+item.unit, reason:reason, skipReason:true});
+  sToast('📦 '+item.name+': '+old+' → '+item.currentStock+' '+item.unit,'success');
+  render(); refreshBanner();
+}
+function editThr(id){
+  var a=items(), it=a.find(function(x){ return x.id===id; }); if(!it) return;
+  var v=prompt('Low-stock alert kis level pe? ('+it.name+', 0 = alert off)', it.lowStockThreshold||0);
+  if(v===null) return;
+  it.lowStockThreshold=parseFloat(v)||0; saveItems(a);
+  slog('Stock Threshold Changed',{detail:it.name+' → alert @ '+it.lowStockThreshold,skipReason:true});
+  render(); refreshBanner();
+}
+function del(id){
+  var it=find(id); if(!it) return;
+  var run=function(){
+    if(window.JASEC) JASEC.toTrash('inventory',it.name+' ('+it.currentStock+' '+it.unit+')',it);
+    saveItems(items().filter(function(x){ return x.id!==id; }));
+    slog('Stock Item Deleted',{detail:it.name,skipReason:true});
+    sToast('🗑️ '+it.name+' hata diya','info');
+    render(); refreshBanner();
+  };
+  if(window.JASEC) JASEC.guard('inv.stockDelete',{title:'Delete Stock Item',detail:it.name+' ('+it.currentStock+' '+it.unit+')'},run);
+  else if(confirm('Delete '+it.name+'?')) run();
+}
+
+/* ── dashboard low-stock banner (KOT-aging style) ── */
+function refreshBanner(){
+  var dash=document.querySelector('#pg-dash .wrap'); if(!dash) return;
+  var lo=low();
+  var b=document.getElementById('ja29-inv-dashbanner');
+  if(lo.length){
+    if(!b){ b=document.createElement('div'); b.id='ja29-inv-dashbanner'; b.className='ja29-inv-alert'; dash.insertBefore(b,dash.firstChild); }
+    b.innerHTML='📦 <b>Stock kam:</b> '+lo.map(function(x){ return esc(x.name)+' ('+x.currentStock+' '+esc(x.unit)+')'; }).join(' · ')+
+      ' <a href="javascript:void(0)" onclick="nav2(\'inventory\')" style="color:#8a5a12;font-weight:800;text-decoration:underline">Stock kholo →</a>';
+  } else if(b){ b.remove(); }
+}
+
+window.JAINV={
+  items:items, low:low, add:add,
+  _add:function(){
+    if(!can('inv.stockEdit')){ sToast('🚫 Permission nahi','error'); return; }
+    var r=add((document.getElementById('ja29-inv-name')||{}).value,
+              (document.getElementById('ja29-inv-unit')||{}).value,
+              (document.getElementById('ja29-inv-stock')||{}).value,
+              (document.getElementById('ja29-inv-thr')||{}).value);
+    if(r.err){ sToast('❌ '+r.err,'error'); return; }
+    sToast('✅ Stock item add hua','success'); render(); refreshBanner();
+  },
+  _adjust:adjust, _editThr:editThr, _del:del, _render:render
+};
+/* trash restore for inventory type */
+if(window.JASEC && JASEC._p && JASEC._p.restore){
+  var _pr=JASEC._p.restore;
+  JASEC._p.restore=function(id){
+    try{
+      var x=JASEC.trash().find(function(i){ return i.id===id; });
+      if(x && x.type==='inventory'){
+        var a=items(); if(!a.some(function(i){ return i.id===x.data.id; })){ a.push(x.data); saveItems(a); }
+        JASEC.saveTrash(JASEC.trash().filter(function(i){ return i.id!==id; }));
+        JASEC.log('Restored From Trash',{detail:'inventory: '+x.label,skipReason:true});
+        sToast('♻️ Stock item wapas','success');
+        if(JASEC._p.rerender) JASEC._p.rerender();
+        return;
+      }
+    }catch(e){}
+    return _pr.apply(this,arguments);
+  };
+}
+if(typeof window.onShow==='function'){
+  var _prevShow=window.onShow;
+  window.onShow=function(pg){
+    var r=_prevShow.apply(this,arguments);
+    if(pg==='inventory') setTimeout(render,60);
+    if(pg==='dash') setTimeout(refreshBanner,200);
+    return r;
+  };
+}
+setTimeout(function(){ injectPage(); refreshBanner(); },1600);
+console.log('📦 [v29] Inventory/stock alerts ready — items: '+items().length+' · auto-decrement: SKIPPED (see note)');
+})();
+</script>
 </body>
 </html>
