@@ -14639,5 +14639,127 @@ console.log('🛟 [v30] Global error handler active');
 console.log('%c🛡️ JAY AMBE POS v28 → v30 SECURITY+RELIABILITY SUITE READY','font-weight:bold;color:#077a57;font-size:13px');
 })();
 </script>
+
+<!-- v29 PART A — device access QR card -->
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   v29 PART A — DEVICE ACCESS CARD (LAN address + role QR codes)
+   Staff phone / customer menu ke liye ready-made QR — IP typing khatam.
+   ═══════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+if(window.__v29aAccess) return;
+window.__v29aAccess=true;
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function isHttp(){ return /^https?:$/.test(location.protocol); }
+
+function loadQRLib(cb){
+  if(window.QRCode) return cb();
+  var tries=0;
+  (function wait(){
+    if(window.QRCode) return cb();
+    if(tries===0){
+      var s=document.createElement('script');
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+      document.head.appendChild(s);
+    }
+    if(++tries>25) return cb('offline');   /* ~7.5s tak QRCode global ka wait — v27 wali copy bhi chalegi */
+    setTimeout(wait,300);
+  })();
+}
+
+function baseFor(ip){
+  var port=location.port||'3000';
+  return 'http://'+ip+':'+port+'/';
+}
+
+function drawQRs(ip){
+  var staffEl=document.getElementById('v29a-qr-staff'), custEl=document.getElementById('v29a-qr-cust');
+  if(!staffEl||!custEl) return;
+  staffEl.innerHTML=''; custEl.innerHTML='';
+  loadQRLib(function(err){
+    if(err||!window.QRCode){
+      staffEl.innerHTML='<div style="font-size:11px;color:var(--muted)">QR library load nahi hui (internet chahiye ek baar)</div>';
+      return;
+    }
+    try{
+      new QRCode(staffEl,{text:baseFor(ip)+'?role=mobile',width:150,height:150,correctLevel:QRCode.CorrectLevel.M});
+      new QRCode(custEl,{text:baseFor(ip)+'?role=menu',width:150,height:150,correctLevel:QRCode.CorrectLevel.M});
+    }catch(e){}
+  });
+  var su=document.getElementById('v29a-url-staff'), cu=document.getElementById('v29a-url-cust');
+  if(su) su.textContent=baseFor(ip)+'?role=mobile';
+  if(cu) cu.textContent=baseFor(ip)+'?role=menu';
+}
+
+function fillIPs(){
+  var sel=document.getElementById('v29a-ip'); if(!sel) return;
+  fetch('/api/ping',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }).then(function(j){
+    var ips=(j&&j.ips)||[];
+    if(!ips.length){ sel.innerHTML='<option>IP nahi mila</option>'; return; }
+    sel.innerHTML=ips.map(function(ip){ return '<option value="'+esc(ip)+'">'+esc(ip)+'</option>'; }).join('');
+    drawQRs(ips[0]);
+  }).catch(function(){ sel.innerHTML='<option>server offline</option>'; });
+}
+
+function injectCard(){
+  var pg=document.getElementById('pg-settings');
+  if(!pg || document.getElementById('v29a-access-card')) return;
+  var wrap=pg.querySelector('.wrap'); if(!wrap) return;
+  var card=document.createElement('div');
+  card.className='card'; card.id='v29a-access-card';
+  if(!isHttp()){
+    card.innerHTML='<div class="card-h">📶 Device Access (QR)</div>'+
+      '<p style="font-size:12px;color:var(--muted)">Ye card LAN server mode me kaam karta hai — POS ko "Jay Ambe POS" desktop icon se kholo (server ke saath), phir yaha QR codes milenge.</p>';
+    wrap.appendChild(card); return;
+  }
+  card.innerHTML=
+    '<div class="card-h">📶 Device Access (QR) <span style="font-size:10px;background:var(--brand,#077a57);color:#fff;border-radius:999px;padding:2px 8px;margin-left:6px">v29</span></div>'+
+    '<p style="font-size:12px;color:var(--muted);margin-bottom:10px">Phone/tablet same WiFi par ho — bas QR scan karo, IP type karne ki zaroorat nahi.</p>'+
+    '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px">'+
+      '<label style="font-size:11px;font-weight:700;color:var(--muted)">SERVER IP</label>'+
+      '<select id="v29a-ip" class="ctrl" style="min-width:160px" onchange="drawQRs&&0"></select>'+
+      '<button type="button" class="btn btn-ghost btn-sm" onclick="window.__v29aRefresh()">🔄 Refresh</button>'+
+    '</div>'+
+    '<div style="display:flex;gap:26px;flex-wrap:wrap">'+
+      '<div style="text-align:center"><div style="font-weight:800;font-size:13px;margin-bottom:6px">🧑‍🍳 Staff Phone (orders)</div>'+
+        '<div id="v29a-qr-staff" style="background:#fff;padding:8px;border-radius:10px;display:inline-block"></div>'+
+        '<div id="v29a-url-staff" style="font-size:10.5px;color:var(--muted);margin-top:5px;font-family:monospace"></div></div>'+
+      '<div style="text-align:center"><div style="font-weight:800;font-size:13px;margin-bottom:6px">🍽️ Customer Menu</div>'+
+        '<div id="v29a-qr-cust" style="background:#fff;padding:8px;border-radius:10px;display:inline-block"></div>'+
+        '<div id="v29a-url-cust" style="font-size:10.5px;color:var(--muted);margin-top:5px;font-family:monospace"></div></div>'+
+    '</div>'+
+    '<details style="margin-top:14px"><summary style="cursor:pointer;font-weight:700;color:var(--brand,#077a57)">📌 IP baar-baar badal jaata hai? Static IP set karo (ek baar, 2 minute)</summary>'+
+      '<div style="font-size:12px;line-height:1.9;margin-top:8px;color:var(--muted)">'+
+      '1. Is PC par <b>Windows Settings → Network &amp; Internet → WiFi/Ethernet → apna network → IP assignment → Edit</b> kholo.<br>'+
+      '2. <b>Manual</b> chuno, IPv4 ON karo.<br>'+
+      '3. IP address: upar wala hi IP daalo (jaise <b>192.168.1.50</b>) — Subnet: <b>255.255.255.0</b> — Gateway: router ka IP (mostly <b>192.168.1.1</b>).<br>'+
+      '4. Save karo. Bas — ab IP kabhi nahi badlega, QR codes hamesha kaam karenge.<br>'+
+      '<i>Router badla to ek baar phir se karna padega. mDNS (jayambe.local) Android phones par reliable nahi hai isliye static IP + QR hi best tarika hai.</i>'+
+      '</div></details>';
+  wrap.appendChild(card);
+  fillIPs();
+  var sel=document.getElementById('v29a-ip');
+  if(sel) sel.onchange=function(){ drawQRs(sel.value); };
+}
+window.__v29aRefresh=function(){
+  var s=document.getElementById('v29a-qr-staff'), c=document.getElementById('v29a-qr-cust');
+  if(s) s.innerHTML=''; if(c) c.innerHTML='';
+  fillIPs();
+};
+
+if(typeof window.onShow==='function'){
+  var _prev=window.onShow;
+  window.onShow=function(pg){
+    var r=_prev.apply(this,arguments);
+    if(pg==='settings') setTimeout(injectCard,120);
+    return r;
+  };
+}
+setTimeout(injectCard,1600);
+console.log('📶 [v29a] Device Access card ready');
+})();
+</script>
 </body>
 </html>
