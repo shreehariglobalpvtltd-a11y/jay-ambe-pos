@@ -15102,5 +15102,179 @@ setTimeout(injectCard,1700);
 console.log('🖨️ [v29b] Printer Routing Pro loaded (rules: '+cfg().rules.length+', '+(cfg().on?'ON':'OFF')+')');
 })();
 </script>
+
+<!-- v29 PART C — owner dashboard -->
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   v29 PART C — OWNER-FIRST DASHBOARD
+   "Kati paisa aayo, kati benefit, kaha dhyan chahiye" — sabse upar.
+   Existing dashboard/cards ko chhua nahi — sirf do naye cards TOP par.
+   Profit sirf REAL cost data se — koi item me cost nahi to number
+   fabricate nahi hota, CTA dikhta hai.
+   ═══════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+if(window.__v29cOwner) return;
+window.__v29cOwner=true;
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function rupee(n){ return '₹'+Math.round(n||0).toLocaleString('en-IN'); }
+function tdy(){ try{ return (typeof today==='function')?today():''; }catch(e){ return ''; } }
+function ydy(){ var d=new Date(); d.setDate(d.getDate()-1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+/* ── optional Cost ₹ field in menu editor (profit prerequisite) ── */
+function injectCostField(){
+  if(document.getElementById('v29c-cost')) return;
+  var priceInp=document.getElementById('m-price'); if(!priceInp) return;
+  var priceFld=priceInp.closest('.fld'); if(!priceFld||!priceFld.parentNode) return;
+  var fld=document.createElement('div');
+  fld.className='fld';
+  fld.innerHTML='<label>Cost ₹ <span style="font-size:9.5px;color:var(--muted)">(optional — profit ke liye)</span></label>'+
+    '<input id="v29c-cost" type="number" inputmode="numeric" placeholder="jaise 45">';
+  priceFld.parentNode.insertBefore(fld,priceFld.nextSibling);
+}
+if(typeof window.saveMenuItem==='function'){
+  var _prevSaveItem=window.saveMenuItem;
+  window.saveMenuItem=function(){
+    var wasIdx=(typeof state!=='undefined')?state.editIdx:null;
+    var prevLen=(typeof state!=='undefined'&&state.menu)?state.menu.length:0;
+    var cost=parseFloat((document.getElementById('v29c-cost')||{}).value)||0;
+    var r=_prevSaveItem.apply(this,arguments);
+    try{
+      var target=null;
+      if(wasIdx!==null && state.editIdx===null) target=state.menu[wasIdx];            /* edit success */
+      else if(wasIdx===null && state.menu.length>prevLen) target=state.menu[state.menu.length-1];  /* add success */
+      if(target){ target.costPrice=cost>0?cost:0; save(); }
+    }catch(e){}
+    return r;
+  };
+}
+if(typeof window.editItem==='function'){
+  var _prevEditItem=window.editItem;
+  window.editItem=function(i){
+    var r=_prevEditItem.apply(this,arguments);
+    try{ var el=document.getElementById('v29c-cost'); if(el) el.value=(state.menu[i]&&state.menu[i].costPrice)||''; }catch(e){}
+    return r;
+  };
+}
+if(typeof window.cancelEdit==='function'){
+  var _prevCancelEdit=window.cancelEdit;
+  window.cancelEdit=function(){
+    var r=_prevCancelEdit.apply(this,arguments);
+    try{ var el=document.getElementById('v29c-cost'); if(el) el.value=''; }catch(e){}
+    return r;
+  };
+}
+
+/* ── owner summary computation ── */
+function liveOf(dateStr){
+  try{ return state.orders.filter(function(o){ return o.date===dateStr && o.status!=='Cancelled'; }); }
+  catch(e){ return []; }
+}
+function computeSummary(){
+  var t=tdy();
+  var todays=liveOf(t), yests=liveOf(ydy());
+  var rev=todays.reduce(function(s,o){ return s+(o.total||0); },0);
+  var revY=yests.reduce(function(s,o){ return s+(o.total||0); },0);
+  var cash=0, online=0;
+  todays.forEach(function(o){ if((o.pay||'Cash')==='Cash') cash+=o.total||0; else online+=o.total||0; });
+  /* due: khata system ho to customer balances, warna Due-status bills */
+  var due=0, dueSrc='';
+  try{
+    var kh=JSON.parse(localStorage.getItem('ja29_customers')||'null');
+    if(kh && kh.length){ due=kh.reduce(function(s,c){ return s+(c.totalDue||0); },0); dueSrc='khata'; }
+    else{ due=state.orders.filter(function(o){ return o.status==='Due'; }).reduce(function(s,o){ return s+(o.total||0); },0); dueSrc='bills'; }
+  }catch(e){}
+  /* profit — sirf real costPrice wale items se */
+  var profit=0, covered=0, anyCost=false;
+  try{
+    anyCost=state.menu.some(function(m){ return m.costPrice>0; });
+    if(anyCost){
+      todays.forEach(function(o){
+        (o.items||[]).forEach(function(it){
+          var m=state.menu.find(function(x){ return x.id===it.id; });
+          if(m && m.costPrice>0){ profit+=((it.price||0)-m.costPrice)*(it.qty||1); covered+=(it.price||0)*(it.qty||1); }
+        });
+      });
+    }
+  }catch(e){}
+  return {rev:rev,revY:revY,cash:cash,online:online,due:due,dueSrc:dueSrc,
+          profit:profit,coverage:rev>0?Math.round(covered/rev*100):0,anyCost:anyCost,orders:todays.length};
+}
+function bigStat(v,l,sub,color){
+  return '<div class="jasec-tile" style="min-width:150px"><div class="v" style="color:'+(color||'inherit')+';font-size:21px">'+v+'</div>'+
+    '<div class="l">'+l+'</div>'+(sub?('<div style="font-size:10.5px;margin-top:3px;color:var(--muted)">'+sub+'</div>'):'')+'</div>';
+}
+function renderOwnerCards(){
+  var wrap=document.querySelector('#pg-dash .wrap'); if(!wrap) return;
+  var host=document.getElementById('v29c-owner');
+  if(!host){
+    host=document.createElement('div'); host.id='v29c-owner';
+    wrap.insertBefore(host,wrap.firstChild);
+  }
+  var s=computeSummary();
+  var delta='';
+  if(s.revY>0){ var pc=Math.round((s.rev-s.revY)/s.revY*100); delta=(pc>=0?'▲ +':'▼ ')+pc+'% vs kal ('+rupee(s.revY)+')'; }
+  else delta='kal: '+rupee(s.revY);
+  var profitTile;
+  if(s.anyCost){
+    profitTile=bigStat(rupee(s.profit),'Aaj ka Profit (est.)', s.coverage+'% sales par cost data hai','#1d9e6f');
+  } else {
+    profitTile=bigStat('—','Profit Tracking','<a href="javascript:void(0)" onclick="nav2(\'menu\')" style="color:var(--brand,#077a57);font-weight:700">Menu me Cost ₹ bharo</a> to real profit dikhega','');
+  }
+  host.innerHTML=
+    '<div class="jasec-card" style="border-left:4px solid var(--brand,#077a57)">'+
+      '<h3 style="display:flex;align-items:center;gap:8px">💼 Owner Summary <span class="jasec-sm">('+s.orders+' orders aaj)</span></h3>'+
+      '<div class="jasec-tiles" style="margin-bottom:0">'+
+        bigStat(rupee(s.rev),'Aaj ka Revenue',delta,'#077a57')+
+        bigStat(rupee(s.cash),'💵 Cash aaj','','')+
+        bigStat(rupee(s.online),'📲 Online aaj','','')+
+        bigStat(rupee(s.due),'Udhaar / Due baaki',(s.dueSrc==='khata'?'Khata Book se':'Due bills se'),s.due>0?'#b7791f':'#1d9e6f')+
+        profitTile+
+      '</div></div>'+
+    '<div class="jasec-card" id="v29c-nigrani-card">'+
+      '<h3 style="display:flex;align-items:center;gap:8px">👁️ Nigrani — Staff Activity '+
+      '<button type="button" class="jasec-btn jasec-btn-ghost" style="margin-left:auto;padding:5px 12px;font-size:11px" onclick="if(window.JASEC)JASEC.openPanel()">Sab dekho →</button></h3>'+
+      '<div id="v29c-nigrani"></div></div>';
+  renderNigrani();
+}
+var RISKY=/Delete|Deleted|Cancel|Discount|Payment|DENIED|Failed|LOCKOUT|Force|Refund|Override|EMERGENCY|Restore/i;
+function renderNigrani(){
+  var el=document.getElementById('v29c-nigrani'); if(!el) return;
+  var logs=[];
+  try{ logs=(window.JASEC?JASEC.getLogs():[]).filter(function(e){ return RISKY.test(e.a||''); }).slice(-8).reverse(); }catch(e){}
+  if(!logs.length){ el.innerHTML='<div class="jasec-sm">🟢 Aaj koi risky activity nahi — sab normal</div>'; return; }
+  el.innerHTML=logs.map(function(e){
+    var line='<b>'+esc(e.t)+'</b> · <b>'+esc(e.u)+'</b> — '+esc(e.a);
+    if(e.det) line+=' <span class="jasec-sm">('+esc(e.det)+')</span>';
+    if(e.rs) line+=' <i class="jasec-sm">— reason: '+esc(e.rs)+'</i>';
+    var hot=/DENIED|Failed|LOCKOUT|EMERGENCY|Delete/i.test(e.a);
+    return '<div class="jasec-live" style="'+(hot?'border-left-color:#d43c3c':'')+'">'+line+'</div>';
+  }).join('');
+}
+
+/* hooks: dash render + menu form */
+if(typeof window.loadDash==='function'){
+  var _prevLoadDash=window.loadDash;
+  window.loadDash=function(){
+    var r=_prevLoadDash.apply(this,arguments);
+    try{ renderOwnerCards(); }catch(e){}
+    return r;
+  };
+}
+if(typeof window.onShow==='function'){
+  var _prevShow=window.onShow;
+  window.onShow=function(pg){
+    var r=_prevShow.apply(this,arguments);
+    if(pg==='dash') setTimeout(renderOwnerCards,150);
+    if(pg==='menu') setTimeout(injectCostField,120);
+    return r;
+  };
+}
+setTimeout(injectCostField,1900);
+console.log('💼 [v29c] Owner dashboard + cost field ready');
+})();
+</script>
 </body>
 </html>
