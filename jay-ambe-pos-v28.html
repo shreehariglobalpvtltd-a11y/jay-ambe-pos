@@ -15805,5 +15805,329 @@ setTimeout(function(){ injectPage(); injectDueSeg(); },1500);
 console.log('📒 [v29-khata] Due/Khata system ready — customers: '+customers().length);
 })();
 </script>
+
+<!-- v29 PHASE 2 — merge/split -->
+<style>
+/* v29 merge/split */
+.ja29-mrow{display:flex;align-items:center;gap:8px;padding:9px 10px;border:1px solid var(--line,#dde8e3);border-radius:10px;margin-bottom:6px;font-size:13px;cursor:pointer}
+.ja29-mrow:hover{background:var(--soft,#f5f8f6)}
+.ja29-mrow input[type=radio]{margin-left:4px}
+</style>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   v29 PHASE 2 — MERGE TABLES (item-level) + SPLIT BILL (real sub-bills)
+   Purana amount-only merge / display-only split ko upgrade karta hai.
+   Order shape same rehta hai; items me sirf additive `.from` tag lagta
+   hai. Naye child orders: id = <parent>-A/-B…, parent Cancelled (double
+   count na ho). Table tabhi free jab saare sub-bills settle ho jayen.
+   ═══════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+if(window.JAMERGE) return;
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function rupee(n){ return '₹'+Math.round(n||0).toLocaleString('en-IN'); }
+function sToast(m,t){ try{ if(typeof toast==='function'){ toast(m,t); return; } }catch(e){} }
+function can(p){ return !window.JASEC || JASEC.can(p); }
+function slog(a,o){ try{ if(window.JASEC) JASEC.log(a,o); }catch(e){} }
+function findOrder(id){ try{ return state.orders.find(function(o){ return o.id===id; }); }catch(e){ return null; } }
+function orderTotal(items){ return (items||[]).reduce(function(s,i){ return s+(i.price||0)*(i.qty||1); },0); }
+function closeOv(id){ var o=document.getElementById(id); if(o) o.remove(); }
+
+/* ═══════════ MERGE TABLES (item-level) ═══════════ */
+function occupiedTables(){
+  var out=[];
+  try{
+    Object.keys(allTables).forEach(function(k){
+      var t=allTables[k];
+      if((t.status==='occupied'||t.status==='hold') && t.currentOrderId) out.push(t);
+    });
+  }catch(e){}
+  return out;
+}
+function openMerge(){
+  if(!can('tbl.merge')){ sToast('🚫 Merge permission nahi','error'); return; }
+  var occ=occupiedTables();
+  if(occ.length<2){ sToast('Merge ke liye 2+ running tables (jinme saved order ho) chahiye','error'); return; }
+  closeOv('ja29-merge');
+  var ov=document.createElement('div');
+  ov.id='ja29-merge'; ov.className='jasec-ov show';
+  ov.innerHTML='<div class="jasec-gcard" style="width:min(460px,94vw);max-height:84vh;overflow-y:auto">'+
+    '<div class="jasec-gtop"><span class="jasec-gicon">🔗</span><div><div class="jasec-gtitle">Merge Tables</div>'+
+    '<div class="jasec-gsub">2+ tables chuno, primary select karo — sab items primary me aa jayenge</div></div></div>'+
+    '<div style="margin:6px 0">'+occ.map(function(t){
+      var o=findOrder(t.currentOrderId);
+      var amt=o?orderTotal(o.items):(t.billAmount||0);
+      return '<label class="ja29-mrow"><input type="checkbox" class="ja29-mchk" value="'+esc(t.id)+'" onchange="JAMERGE._sync()"> '+
+        '<b>Table '+esc(t.number)+'</b> <span class="jasec-sm">'+esc(t.section||'')+' · '+rupee(amt)+' · '+(o?o.items.length:0)+' items</span>'+
+        '<span style="margin-left:auto"><input type="radio" name="ja29mpri" value="'+esc(t.id)+'" title="Primary banao"> primary</span></label>';
+    }).join('')+'</div>'+
+    '<div class="jasec-aerr" id="ja29-merge-err">&nbsp;</div>'+
+    '<div class="jasec-arow">'+
+      '<button type="button" class="jasec-btn jasec-btn-ghost" onclick="JAMERGE._close()">Cancel</button>'+
+      '<button type="button" class="jasec-btn jasec-btn-brand" onclick="JAMERGE._go()">🔗 Merge</button>'+
+    '</div></div>';
+  document.body.appendChild(ov);
+}
+function syncMerge(){
+  /* jab checkbox tick ho, primary radio sirf ticked tables me se choose ho sake */
+  var checked={};
+  document.querySelectorAll('.ja29-mchk:checked').forEach(function(cb){ checked[cb.value]=1; });
+  document.querySelectorAll('input[name="ja29mpri"]').forEach(function(r){ r.disabled=!checked[r.value]; });
+}
+function doMerge(){
+  var ids=[].slice.call(document.querySelectorAll('.ja29-mchk:checked')).map(function(c){ return c.value; });
+  if(ids.length<2){ document.getElementById('ja29-merge-err').textContent='❌ Kam se kam 2 tables chuno'; return; }
+  var priEl=document.querySelector('input[name="ja29mpri"]:checked');
+  var priId=priEl?priEl.value:ids[0];
+  if(ids.indexOf(priId)<0) priId=ids[0];
+  var priTable=getTable(priId), priOrder=findOrder(priTable.currentOrderId);
+  if(!priOrder){ document.getElementById('ja29-merge-err').textContent='❌ Primary table ka order nahi mila'; return; }
+  var moved=0, srcLabels=[];
+  ids.forEach(function(id){
+    if(id===priId) return;
+    var t=getTable(id), o=findOrder(t.currentOrderId);
+    if(!o) return;
+    (o.items||[]).forEach(function(it){
+      var copy=Object.assign({},it); copy.from='T'+t.number;
+      priOrder.items.push(copy); moved++;
+    });
+    o.status='Cancelled'; o.cancelReason='Merged into Table '+priTable.number;
+    o.history=o.history||[]; o.history.push('Merged → T'+priTable.number+' '+new Date().toLocaleString('en-IN'));
+    srcLabels.push('T'+t.number);
+    updateTable(id,{status:'empty',occupants:0,billAmount:0,currentOrderId:null,assignedWaiter:'',notes:'',kotPrinted:false,billPrinted:false,occupiedAt:0});
+  });
+  priOrder.total=orderTotal(priOrder.items);
+  priOrder.netTotal=priOrder.total;
+  priOrder.history=priOrder.history||[]; priOrder.history.push('Merged in '+srcLabels.join(',')+' '+new Date().toLocaleString('en-IN'));
+  updateTable(priId,{billAmount:priOrder.total});
+  save();
+  try{ renderTableGrid(); }catch(e){}
+  slog('Tables Merged',{detail:srcLabels.join(',')+' → T'+priTable.number+' ('+moved+' items, '+rupee(priOrder.total)+')',skipReason:true});
+  closeOv('ja29-merge');
+  sToast('🔗 '+srcLabels.join(', ')+' → Table '+priTable.number+' merged ('+moved+' items)','success');
+}
+
+/* ═══════════ SPLIT BILL (real payable sub-bills) ═══════════ */
+function splittableOrder(){
+  /* editing order > active table's saved order */
+  try{
+    if(state.editOrderId){ var e=findOrder(state.editOrderId); if(e) return e; }
+    if(state.activeTable && state.activeTable.currentOrderId){ var o=findOrder(state.activeTable.currentOrderId); if(o) return o; }
+  }catch(e){}
+  return null;
+}
+function openSplit(orderId){
+  if(!can('bill.split')){ sToast('🚫 Split permission nahi','error'); return; }
+  var o=orderId?findOrder(orderId):splittableOrder();
+  if(!o){ sToast('Split ke liye pehle order SAVE karo (ya table ka running order kholo)','warn'); return; }
+  if(o.splitParent){ sToast('Ye already ek split sub-bill hai','warn'); return; }
+  if((o.items||[]).length===0){ sToast('Order me items nahi','warn'); return; }
+  closeOv('ja29-split');
+  var ov=document.createElement('div');
+  ov.id='ja29-split'; ov.className='jasec-ov show';
+  ov.innerHTML='<div class="jasec-gcard" style="width:min(520px,95vw);max-height:86vh;overflow-y:auto">'+
+    '<div class="jasec-gtop"><span class="jasec-gicon">✂️</span><div><div class="jasec-gtitle">Split Bill — '+esc(o.id)+'</div>'+
+    '<div class="jasec-gsub">Total '+rupee(orderTotal(o.items))+' · '+o.items.length+' items</div></div></div>'+
+    '<div class="jasec-arow" style="justify-content:flex-start;margin-bottom:8px">'+
+      '<button type="button" class="jasec-btn jasec-btn-ghost" id="ja29-sm-even" onclick="JAMERGE._mode(\'even\')">➗ Barabar (N ways)</button>'+
+      '<button type="button" class="jasec-btn jasec-btn-ghost" id="ja29-sm-item" onclick="JAMERGE._mode(\'item\')">🧾 Item-wise</button>'+
+    '</div>'+
+    '<div id="ja29-split-body"></div>'+
+    '<div class="jasec-aerr" id="ja29-split-err">&nbsp;</div>'+
+    '<div class="jasec-arow">'+
+      '<button type="button" class="jasec-btn jasec-btn-ghost" onclick="JAMERGE._sclose()">Cancel</button>'+
+      '<button type="button" class="jasec-btn jasec-btn-brand" onclick="JAMERGE._sgo()">✂️ Create Sub-Bills</button>'+
+    '</div></div>';
+  document.body.appendChild(ov);
+  window.__ja29SplitOrder=o.id;
+  splitMode('even');
+}
+var splitState={mode:'even',n:2,assign:{}};
+function splitMode(m){
+  splitState.mode=m;
+  document.getElementById('ja29-sm-even').classList.toggle('jasec-btn-brand',m==='even');
+  document.getElementById('ja29-sm-item').classList.toggle('jasec-btn-brand',m==='item');
+  var o=findOrder(window.__ja29SplitOrder); if(!o) return;
+  var body=document.getElementById('ja29-split-body');
+  if(m==='even'){
+    var total=orderTotal(o.items);
+    body.innerHTML='<label class="jasec-glbl">Kitne logon me?</label>'+
+      '<input type="number" class="jasec-inp" id="ja29-split-n" value="'+splitState.n+'" min="2" max="20" oninput="JAMERGE._evenPrev()">'+
+      '<div id="ja29-even-prev" style="font-size:12.5px;margin-top:6px"></div>';
+    evenPreview();
+  } else {
+    splitState.assign={};
+    var subCount=splitState.subCount||2;
+    body.innerHTML='<label class="jasec-glbl">Har item kis bill me? <button type="button" class="jasec-btn jasec-btn-ghost" style="padding:3px 9px;font-size:11px" onclick="JAMERGE._addSub()">➕ Bill</button></label>'+
+      '<div id="ja29-item-rows">'+o.items.map(function(it,i){
+        return '<div class="japq-row"><span class="lbl"><b>'+esc(it.name)+'</b> ×'+(it.qty||1)+' <span class="jasec-sm">'+rupee((it.price||0)*(it.qty||1))+'</span></span>'+
+          '<select class="jasec-select ja29-iasg" data-i="'+i+'" style="padding:5px 8px"></select></div>';
+      }).join('')+'</div>';
+    renderSubOptions();
+  }
+}
+function evenPreview(){
+  var o=findOrder(window.__ja29SplitOrder); if(!o) return;
+  var n=parseInt((document.getElementById('ja29-split-n')||{}).value,10)||2;
+  splitState.n=n;
+  var total=orderTotal(o.items);
+  var per=Math.floor(total/n), rem=total-per*(n-1);
+  var rows='';
+  for(var i=1;i<=n;i++){ rows+='<div class="japq-row"><span class="lbl">Bill '+i+(i===1?' (remainder)':'')+'</span><b>'+rupee(i===1?rem:per)+'</b></div>'; }
+  var el=document.getElementById('ja29-even-prev'); if(el) el.innerHTML=rows;
+}
+function subLabels(){ var n=splitState.subCount||2, a=[]; for(var i=0;i<n;i++) a.push(String.fromCharCode(65+i)); return a; }
+function renderSubOptions(){
+  var labels=subLabels();
+  document.querySelectorAll('.ja29-iasg').forEach(function(sel){
+    var cur=sel.value;
+    sel.innerHTML='<option value="">— original —</option>'+labels.map(function(L){ return '<option value="'+L+'">Bill '+L+'</option>'; }).join('');
+    if(cur) sel.value=cur;
+  });
+}
+function addSub(){ splitState.subCount=(splitState.subCount||2)+1; renderSubOptions(); }
+
+function doSplit(){
+  var o=findOrder(window.__ja29SplitOrder); if(!o){ return; }
+  var children=[];
+  if(splitState.mode==='even'){
+    var n=parseInt((document.getElementById('ja29-split-n')||{}).value,10)||2;
+    if(n<2||n>20){ document.getElementById('ja29-split-err').textContent='❌ 2–20 ke beech'; return; }
+    var total=orderTotal(o.items);
+    var per=Math.floor(total/n), rem=total-per*(n-1);
+    for(var i=0;i<n;i++){
+      var amt=i===0?rem:per;
+      children.push({label:String.fromCharCode(65+i),
+        items:[{id:'split',name:'Split share ('+(i+1)+'/'+n+') of '+o.id,price:amt,qty:1}], total:amt});
+    }
+  } else {
+    var labels=subLabels();
+    var buckets={}; labels.forEach(function(L){ buckets[L]=[]; });
+    var anyAssigned=false;
+    document.querySelectorAll('.ja29-iasg').forEach(function(sel){
+      var L=sel.value; if(!L) return;
+      var idx=parseInt(sel.getAttribute('data-i'),10);
+      buckets[L].push(Object.assign({},o.items[idx])); anyAssigned=true;
+    });
+    if(!anyAssigned){ document.getElementById('ja29-split-err').textContent='❌ Kam se kam ek item assign karo'; return; }
+    labels.forEach(function(L){
+      if(buckets[L].length) children.push({label:L,items:buckets[L],total:orderTotal(buckets[L])});
+    });
+    if(children.length<2){ document.getElementById('ja29-split-err').textContent='❌ 2+ bills me items daalo'; return; }
+  }
+  /* create child orders; parent cancelled (revenue double-count na ho) */
+  var now=new Date();
+  var childIds=[];
+  children.forEach(function(ch){
+    var cid=o.id+'-'+ch.label;
+    var child={ id:cid, num:o.num, train:o.train, trainName:o.trainName||'', pnr:'', coach:'', seat:'',
+      name:o.name||'', mobile:o.mobile||'', note:'Split '+ch.label+' of '+o.id,
+      pay:o.pay||'Cash', status:'Pending', items:ch.items, total:ch.total, commTotal:0, netTotal:ch.total,
+      date:o.date, time:now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}), ts:Date.now(),
+      cancelReason:'', history:['Split from '+o.id], splitParent:o.id };
+    state.orders.unshift(child); childIds.push(cid);
+  });
+  o.status='Cancelled'; o.cancelReason='Split into '+childIds.join(', ');
+  o.splitChildren=childIds;
+  o.history=o.history||[]; o.history.push('Split into '+childIds.length+' bills '+now.toLocaleString('en-IN'));
+  /* table split-tracking: tabhi free jab sab settle */
+  try{
+    if(state.activeTable && state.activeTable.currentOrderId===o.id){
+      updateTable(state.activeTable.id,{splitPending:childIds.slice(), status:'occupied', currentOrderId:null});
+    } else {
+      Object.keys(allTables).forEach(function(k){
+        if(allTables[k].currentOrderId===o.id) updateTable(k,{splitPending:childIds.slice(), currentOrderId:null});
+      });
+    }
+  }catch(e){}
+  save();
+  try{ renderOrders&&renderOrders(); renderTableGrid&&renderTableGrid(); }catch(e){}
+  slog('Bill Split',{detail:o.id+' → '+childIds.join(', ')+' ('+splitState.mode+')',skipReason:true});
+  closeOv('ja29-split');
+  sToast('✂️ '+o.id+' → '+childIds.length+' sub-bills bane — har ek alag pay hoga','success');
+  if(typeof nav2==='function') nav2('orders');
+}
+
+/* jab koi split child Paid ho → table ka splitPending update; sab settle → free */
+function onChildSettled(orderId){
+  try{
+    Object.keys(allTables).forEach(function(k){
+      var t=allTables[k];
+      if(t.splitPending && t.splitPending.indexOf(orderId)>=0){
+        var rest=t.splitPending.filter(function(x){
+          if(x===orderId) return false;
+          var oo=findOrder(x); return !(oo && (oo.status==='Paid'||oo.status==='Cancelled'));
+        });
+        if(rest.length===0){
+          updateTable(k,{status:'empty',occupants:0,billAmount:0,splitPending:null,assignedWaiter:'',notes:'',kotPrinted:false,billPrinted:false,occupiedAt:0});
+          sToast('✅ Table '+t.number+' ke sab split-bills settle — table free','success');
+        } else {
+          updateTable(k,{splitPending:rest});
+        }
+      }
+    });
+    try{ renderTableGrid&&renderTableGrid(); }catch(e){}
+  }catch(e){}
+}
+/* hook status-change fns to detect child settlement */
+['quickMarkPaid','rptSetStatus','setOrderStatus'].forEach(function(fn){
+  if(typeof window[fn]!=='function') return;
+  var prev=window[fn];
+  window[fn]=function(orderId,st){
+    var r=prev.apply(this,arguments);
+    try{ var o=findOrder(orderId); if(o && o.splitParent && o.status==='Paid') onChildSettled(orderId); }catch(e){}
+    return r;
+  };
+});
+
+/* ── UI injection: Merge button on Tables, Split button on billing cart ── */
+function injectButtons(){
+  /* Merge: Tables page ke action bar me */
+  var tblBtn=document.querySelector('#pg-tables button[onclick*="openMergeModal"],#pg-tables button[onclick*="openMerge"]');
+  if(!document.getElementById('ja29-merge-btn')){
+    var addBtn=document.querySelector('#pg-tables .tv-actions button, #pg-tables [class*="action"] button');
+    var host=document.querySelector('#pg-tables .tv-actions')||document.querySelector('#pg-tables .wrap');
+    if(host){
+      var b=document.createElement('button');
+      b.id='ja29-merge-btn'; b.className='btn btn-ghost btn-sm';
+      b.innerHTML='🔗 Merge'; b.onclick=openMerge;
+      host.appendChild(b);
+    }
+  }
+  /* Split: billing cart actions me */
+  if(!document.getElementById('ja29-split-btn')){
+    var actions=document.querySelector('.cart-actions');
+    if(actions){
+      var s=document.createElement('button');
+      s.id='ja29-split-btn'; s.className='btn btn-ghost btn-sm';
+      s.innerHTML='✂️ Split'; s.style.cssText='font-size:11px;padding:6px 10px';
+      s.onclick=function(){ openSplit(); };
+      actions.appendChild(s);
+    }
+  }
+}
+
+window.JAMERGE={
+  openMerge:openMerge, openSplit:openSplit, onChildSettled:onChildSettled,
+  _sync:syncMerge, _go:doMerge, _close:function(){ closeOv('ja29-merge'); },
+  _mode:splitMode, _evenPrev:evenPreview, _addSub:addSub, _sgo:doSplit,
+  _sclose:function(){ closeOv('ja29-split'); }
+};
+/* replace old merge entry points (kept guarded via our can()/log) */
+window.openMergeModal=openMerge;
+
+if(typeof window.onShow==='function'){
+  var _prevShow=window.onShow;
+  window.onShow=function(pg){
+    var r=_prevShow.apply(this,arguments);
+    if(pg==='tables'||pg==='billing') setTimeout(injectButtons,200);
+    return r;
+  };
+}
+setTimeout(injectButtons,1800);
+console.log('🔗✂️ [v29] Merge (item-level) + Split (real sub-bills) ready');
+})();
+</script>
 </body>
 </html>
