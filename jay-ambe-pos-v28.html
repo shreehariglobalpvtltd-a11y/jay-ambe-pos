@@ -16129,5 +16129,251 @@ setTimeout(injectButtons,1800);
 console.log('🔗✂️ [v29] Merge (item-level) + Split (real sub-bills) ready');
 })();
 </script>
+
+<!-- v29 PHASE 3 — happy hour -->
+<style>
+/* v29 happy hour */
+.ja29-hh-banner{background:linear-gradient(90deg,#fff4e0,#ffe9c7);border:1px solid #e8b76a;color:#8a5a12;border-radius:12px;padding:10px 14px;font-size:13px;margin:8px 0;text-align:center;animation:hhpulse 2.2s infinite}
+@keyframes hhpulse{0%,100%{box-shadow:0 0 0 rgba(232,183,106,0)}50%{box-shadow:0 0 14px rgba(232,183,106,.5)}}
+.hh-old{text-decoration:line-through;color:var(--muted,#999);font-size:.85em;font-weight:600}
+.hh-new{color:#b7791f;font-weight:900}
+.item.hh-item{position:relative;border-color:#e8b76a}
+.item.hh-item::after{content:'🎉';position:absolute;top:4px;right:6px;font-size:11px}
+.ja29-hh-day{display:inline-flex;align-items:center;gap:5px;font-size:12px;border:1px solid var(--line,#dde8e3);border-radius:8px;padding:5px 9px;cursor:pointer}
+.ja29-hh-day input{accent-color:#b7791f}
+</style>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   v29 PHASE 3 — HAPPY HOUR (auto time-based per-item discount)
+   Manual order-discount se alag: ye per-item automatic hai. Item cart
+   me add hote waqt discounted price lock ho jaata hai (Petpooja jaisa).
+   Key: ja29_happyhour_cfg. Koi security guard nahi (scheduling feature).
+   ═══════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+if(window.JAHH) return;
+
+var K='ja29_happyhour_cfg';
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function sToast(m,t){ try{ if(typeof toast==='function'){ toast(m,t); return; } }catch(e){} }
+function cfg(){
+  try{ var c=JSON.parse(localStorage.getItem(K))||{}; }catch(e){ var c={}; }
+  if(c.on==null) c.on=false;
+  c.start=c.start||'16:00'; c.end=c.end||'19:00';
+  c.days=c.days||[false,true,true,true,true,true,false];  /* Sun..Sat; default Mon-Fri */
+  c.type=c.type||'pct'; if(c.value==null) c.value=15;
+  c.scope=c.scope||'all'; c.cats=c.cats||[]; c.items=c.items||[];
+  return c;
+}
+function saveCfg(c){ try{ localStorage.setItem(K,JSON.stringify(c)); }catch(e){} }
+function cats(){ try{ return (typeof v22Categories!=='undefined'&&v22Categories)?v22Categories.map(function(c){return c.name;}):[]; }catch(e){ return []; } }
+function toMin(hhmm){ var p=String(hhmm||'').split(':'); return (parseInt(p[0],10)||0)*60+(parseInt(p[1],10)||0); }
+
+function isActive(){
+  var c=cfg();
+  if(!c.on) return false;
+  var now=new Date();
+  if(!c.days[now.getDay()]) return false;
+  var cur=now.getHours()*60+now.getMinutes();
+  var s=toMin(c.start), e=toMin(c.end);
+  if(s===e) return false;
+  if(s<e) return cur>=s && cur<e;
+  return cur>=s || cur<e;   /* overnight range (e.g. 22:00–02:00) */
+}
+function eligible(m){
+  if(!m) return false;
+  var c=cfg();
+  if(c.scope==='all') return true;
+  if(c.scope==='cats') return c.cats.indexOf(m.cat)>=0;
+  if(c.scope==='items') return c.items.indexOf(m.id)>=0;
+  return false;
+}
+function hhPrice(m){
+  var c=cfg(), orig=m.price||0;
+  var p=orig;
+  if(c.type==='pct') p=Math.round(orig*(1-(c.value||0)/100));
+  else p=Math.round(c.value||0);          /* fixed price override */
+  if(p<0) p=0; if(p>orig) p=orig;          /* discount hi hoga, mehnga nahi */
+  return p;
+}
+function priceFor(m){ return (isActive()&&eligible(m))?hhPrice(m):(m.price||0); }
+
+/* ── re-price cart on every renderCart (order-independent; robust to the
+      other cart wraps that re-assign addToCart after us). Idempotent:
+      hhPrice always derived from the item's ORIGINAL menu price. ── */
+function repriceCart(){
+  try{
+    var active=isActive();
+    (state.cart||[]).forEach(function(c){
+      var m=state.menu.find(function(x){ return x.id===c.id; }); if(!m) return;
+      if(active && eligible(m)){
+        if(c.origPrice==null) c.origPrice=(c.price!=null?c.price:m.price);
+        c.price=hhPrice(m); c.hh=true;
+      } else if(c.hh){                       /* HH khatam / item ineligible → original wapas */
+        c.price=(c.origPrice!=null?c.origPrice:c.price); c.hh=false; delete c.origPrice;
+      }
+    });
+  }catch(e){}
+}
+if(typeof window.renderCart==='function'){
+  var _prevRC=window.renderCart;
+  window.renderCart=function(){
+    repriceCart();
+    return _prevRC.apply(this,arguments);
+  };
+}
+
+/* ── wrap renderItems: banner + dual price on eligible cards ── */
+function idFromOnclick(el){
+  var oc=el.getAttribute('onclick')||'';
+  var m=oc.match(/addToCart\(['"]([^'"]+)['"]\)/);
+  return m?m[1]:null;
+}
+function decorateItems(){
+  var active=isActive();
+  var grid=document.getElementById('items'); if(!grid) return;
+  grid.querySelectorAll('.item').forEach(function(card){
+    var id=idFromOnclick(card); if(!id) return;
+    var m=state.menu.find(function(x){ return x.id===id; }); if(!m) return;
+    var pr=card.querySelector('.pr'); if(!pr) return;
+    if(active && eligible(m)){
+      var d=hhPrice(m);
+      if(d<m.price){
+        card.classList.add('hh-item');
+        pr.innerHTML='<span class="hh-old">₹'+Math.round(m.price)+'</span> <span class="hh-new">₹'+Math.round(d)+'</span>';
+      }
+    } else {
+      card.classList.remove('hh-item');
+    }
+  });
+}
+function banner(){
+  var host=document.getElementById('pg-billing'); if(!host) return;
+  var b=document.getElementById('ja29-hh-banner');
+  if(isActive()){
+    var c=cfg();
+    var label=c.type==='pct'?(c.value+'% OFF'):('₹'+c.value+' price');
+    var scope=c.scope==='all'?'sab items':c.scope==='cats'?(c.cats.length+' categories'):(c.items.length+' items');
+    if(!b){
+      b=document.createElement('div'); b.id='ja29-hh-banner'; b.className='ja29-hh-banner';
+      var itemsWrap=document.getElementById('items');
+      if(itemsWrap&&itemsWrap.parentNode) itemsWrap.parentNode.insertBefore(b,itemsWrap);
+      else host.insertBefore(b,host.firstChild);
+    }
+    b.innerHTML='🎉 <b>Happy Hour Active</b> — '+esc(label)+' on '+esc(scope)+' <span style="opacity:.8">('+esc(c.start)+'–'+esc(c.end)+')</span>';
+    b.style.display='';
+  } else if(b){ b.style.display='none'; }
+}
+if(typeof window.renderItems==='function'){
+  var _prevRender=window.renderItems;
+  window.renderItems=function(){
+    var r=_prevRender.apply(this,arguments);
+    try{ decorateItems(); banner(); }catch(e){}
+    return r;
+  };
+}
+
+/* ── Settings card ── */
+function injectSettings(){
+  var pg=document.getElementById('pg-settings');
+  if(!pg || document.getElementById('ja29-hh-card')) return;
+  var wrap=pg.querySelector('.wrap'); if(!wrap) return;
+  var card=document.createElement('div');
+  card.className='card'; card.id='ja29-hh-card';
+  card.innerHTML='<div class="card-h">🎉 Happy Hour <span style="font-size:10px;background:#b7791f;color:#fff;border-radius:999px;padding:2px 8px;margin-left:6px">AUTO DISCOUNT</span></div>'+
+    '<p style="font-size:12px;color:var(--muted);margin-bottom:10px">Time set karo — us dauraan eligible items par apne-aap discount lagega. Manual bill-discount se alag hai.</p>'+
+    '<div id="ja29-hh-body"></div>';
+  wrap.appendChild(card);
+  renderSettings();
+}
+function renderSettings(){
+  var host=document.getElementById('ja29-hh-body'); if(!host) return;
+  var c=cfg();
+  var dayNames=['Ravi','Som','Mangal','Budh','Guru','Shukra','Shani'];
+  host.innerHTML=
+    '<label style="display:flex;align-items:center;gap:9px;font-weight:800;font-size:13px;margin-bottom:12px;cursor:pointer">'+
+      '<input type="checkbox" id="ja29-hh-on" '+(c.on?'checked':'')+' style="width:18px;height:18px;accent-color:#b7791f"> Happy Hour ON</label>'+
+    '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px">'+
+      '<div><label class="jasec-glbl">Start</label><input type="time" class="jasec-inp" id="ja29-hh-start" value="'+esc(c.start)+'" style="margin:0"></div>'+
+      '<div><label class="jasec-glbl">End</label><input type="time" class="jasec-inp" id="ja29-hh-end" value="'+esc(c.end)+'" style="margin:0"></div>'+
+    '</div>'+
+    '<label class="jasec-glbl">Din</label>'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">'+
+      dayNames.map(function(d,i){ return '<label class="ja29-hh-day"><input type="checkbox" class="ja29-hh-dc" data-d="'+i+'" '+(c.days[i]?'checked':'')+'> '+d+'</label>'; }).join('')+
+    '</div>'+
+    '<label class="jasec-glbl">Discount</label>'+
+    '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">'+
+      '<label class="jasec-chk"><input type="radio" name="ja29hht" value="pct" '+(c.type==='pct'?'checked':'')+'> % Off</label>'+
+      '<label class="jasec-chk"><input type="radio" name="ja29hht" value="fixed" '+(c.type==='fixed'?'checked':'')+'> Fixed ₹ price</label>'+
+      '<input type="number" class="jasec-inp" id="ja29-hh-val" value="'+c.value+'" style="max-width:110px;margin:0">'+
+    '</div>'+
+    '<label class="jasec-glbl">Kis par lagega</label>'+
+    '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px">'+
+      '<label class="jasec-chk"><input type="radio" name="ja29hhs" value="all" '+(c.scope==='all'?'checked':'')+' onchange="JAHH._scope()"> Sab items</label>'+
+      '<label class="jasec-chk"><input type="radio" name="ja29hhs" value="cats" '+(c.scope==='cats'?'checked':'')+' onchange="JAHH._scope()"> Kuch categories</label>'+
+      '<label class="jasec-chk"><input type="radio" name="ja29hhs" value="items" '+(c.scope==='items'?'checked':'')+' onchange="JAHH._scope()"> Kuch items</label>'+
+    '</div>'+
+    '<div id="ja29-hh-scopebox" style="margin-bottom:10px"></div>'+
+    '<button type="button" class="jasec-btn jasec-btn-brand" onclick="JAHH._save()">💾 Save Happy Hour</button>'+
+    '<div id="ja29-hh-status" class="jasec-sm" style="margin-top:8px"></div>';
+  renderScopeBox();
+  updateStatus();
+}
+function renderScopeBox(){
+  var box=document.getElementById('ja29-hh-scopebox'); if(!box) return;
+  var scopeEl=document.querySelector('input[name="ja29hhs"]:checked');
+  var scope=scopeEl?scopeEl.value:cfg().scope;
+  var c=cfg();
+  if(scope==='cats'){
+    box.innerHTML='<div style="display:flex;gap:6px;flex-wrap:wrap">'+cats().map(function(cn){
+      return '<label class="ja29-hh-day"><input type="checkbox" class="ja29-hh-cat" value="'+esc(cn)+'" '+(c.cats.indexOf(cn)>=0?'checked':'')+'> '+esc(cn)+'</label>';
+    }).join('')+'</div>';
+  } else if(scope==='items'){
+    box.innerHTML='<div style="max-height:180px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:6px">'+
+      (state.menu||[]).map(function(m){
+        return '<label class="jasec-chk" style="justify-content:flex-start"><input type="checkbox" class="ja29-hh-item" value="'+esc(m.id)+'" '+(c.items.indexOf(m.id)>=0?'checked':'')+'> '+esc(m.name)+' <span class="jasec-sm">₹'+Math.round(m.price)+'</span></label>';
+      }).join('')+'</div>';
+  } else box.innerHTML='';
+}
+function updateStatus(){
+  var el=document.getElementById('ja29-hh-status'); if(!el) return;
+  el.innerHTML=isActive()?'🟢 <b style="color:#1d9e6f">Abhi Happy Hour ACTIVE hai</b>':'⚪ Abhi active nahi (time/din check karo)';
+}
+window.JAHH={
+  cfg:cfg, isActive:isActive, priceFor:priceFor, eligible:eligible,
+  _scope:renderScopeBox,
+  _save:function(){
+    var c=cfg();
+    c.on=document.getElementById('ja29-hh-on').checked;
+    c.start=document.getElementById('ja29-hh-start').value||'16:00';
+    c.end=document.getElementById('ja29-hh-end').value||'19:00';
+    c.days=[0,1,2,3,4,5,6].map(function(i){ var el=document.querySelector('.ja29-hh-dc[data-d="'+i+'"]'); return el?el.checked:false; });
+    var t=document.querySelector('input[name="ja29hht"]:checked'); c.type=t?t.value:'pct';
+    c.value=parseFloat(document.getElementById('ja29-hh-val').value)||0;
+    var s=document.querySelector('input[name="ja29hhs"]:checked'); c.scope=s?s.value:'all';
+    c.cats=[].slice.call(document.querySelectorAll('.ja29-hh-cat:checked')).map(function(x){ return x.value; });
+    c.items=[].slice.call(document.querySelectorAll('.ja29-hh-item:checked')).map(function(x){ return x.value; });
+    saveCfg(c);
+    try{ if(window.JASEC) JASEC.log('Happy Hour Settings Changed',{detail:(c.on?'ON ':'OFF ')+c.start+'-'+c.end+' · '+(c.type==='pct'?c.value+'%':'₹'+c.value)+' · '+c.scope,skipReason:true}); }catch(e){}
+    sToast('🎉 Happy Hour save ho gaya'+(isActive()?' — abhi ACTIVE hai!':''),'success');
+    updateStatus();
+    try{ if(typeof renderItems==='function' && document.querySelector('#pg-billing.active')) renderItems(); }catch(e){}
+  }
+};
+if(typeof window.onShow==='function'){
+  var _prevShow=window.onShow;
+  window.onShow=function(pg){
+    var r=_prevShow.apply(this,arguments);
+    if(pg==='settings') setTimeout(injectSettings,160);
+    if(pg==='billing') setTimeout(function(){ try{ decorateItems(); banner(); }catch(e){} },160);
+    return r;
+  };
+}
+/* minute tick: banner auto show/hide jab time window shuru/khatam ho */
+setInterval(function(){ try{ if(document.querySelector('#pg-billing.active')){ decorateItems(); banner(); } }catch(e){} },30000);
+setTimeout(injectSettings,1900);
+console.log('🎉 [v29] Happy Hour ready ('+(cfg().on?'ON':'OFF')+', active now: '+isActive()+')');
+})();
+</script>
 </body>
 </html>
