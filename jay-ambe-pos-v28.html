@@ -14761,5 +14761,346 @@ setTimeout(injectCard,1600);
 console.log('📶 [v29a] Device Access card ready');
 })();
 </script>
+
+<!-- v29 PART B — printer routing pro -->
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   v29 PART B — PRINTER ROUTING PRO (Petpooja-style rules table)
+   Layered OVER the v28 station engine — toggle OFF = purana behavior
+   bilkul same. Priority: Table Range > Category > Order Type > Default.
+   (Table rule poore order ko us printer par bhejta hai; category rule
+   item-wise split karta hai; order-type rule bill/parcel routing ke
+   liye hai; kuch match nahi to Default Printer — kabhi silently fail
+   nahi hota.)
+   ═══════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+if(window.__v29bPrinterPro) return;
+window.__v29bPrinterPro=true;
+
+var CFG_KEY='ja29_printcfg';
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function sToast(m,t){ try{ if(typeof toast==='function'){ toast(m,t); return; } }catch(e){} }
+function cfg(){
+  try{ var c=JSON.parse(localStorage.getItem(CFG_KEY))||{}; }catch(e){ var c={}; }
+  c.names=c.names||{}; c.rules=c.rules||[]; if(c.on==null)c.on=false; c.def=c.def||'';
+  return c;
+}
+function saveCfg(c){ try{ localStorage.setItem(CFG_KEY,JSON.stringify(c)); }catch(e){} }
+function isHttp(){ return /^https?:$/.test(location.protocol); }
+function friendly(real){ var c=cfg(); return c.names[real]||real; }
+function bset(){ try{return JSON.parse(localStorage.getItem('ja3_bset')||'{}');}catch(e){return {};} }
+function shopName(){ var b=bset(); return b.name||b.shop||b.shopName||'Jay Ambe Fast Food'; }
+function shopAddr(){ var b=bset(); return b.addr||b.address||b.line2||''; }
+
+/* ── thermal text builders (v28 format ke saath consistent, 32 col) ── */
+var W=32;
+function line(ch){ return new Array(W+1).join(ch||'-'); }
+function center(s){ s=String(s); if(s.length>=W) return s.slice(0,W); var pad=Math.floor((W-s.length)/2); return new Array(pad+1).join(' ')+s; }
+function row(l,r){ l=String(l);r=String(r); if(l.length+r.length>=W) l=l.slice(0,W-r.length-1); return l+new Array(W-l.length-r.length+1).join(' ')+r; }
+function moneyT(n){ return Math.round(n||0).toString(); }
+function kotText(order,label,items){
+  var t=[]; t.push(line('*')); t.push(center('KITCHEN ORDER')); t.push(center(String(label||'').toUpperCase())); t.push(line('*'));
+  t.push(row('Table: '+(order.train||order.table||'-'),'#'+(order.id||'')));
+  t.push('Time: '+(order.time||new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})));
+  t.push(line('-'));
+  items.forEach(function(i){ t.push(' x'+(i.qty||1)+'  '+(i.name||'')); if(i.note) t.push('      ('+i.note+')'); if(i.from) t.push('      [from '+i.from+']'); });
+  t.push(line('-')); t.push(center(shopName())); t.push(line('*')); t.push('');
+  return t.join('\n');
+}
+function billText(order){
+  var t=[]; t.push(line('*')); t.push(center(shopName())); if(shopAddr()) t.push(center(shopAddr())); t.push(line('*'));
+  t.push(row('Bill #'+(order.id||''),'Table '+(order.train||'-')));
+  t.push(row((order.time||''),(order.date||new Date().toLocaleDateString('en-IN'))));
+  t.push(line('-'));
+  (order.items||[]).forEach(function(i){ t.push(row((i.name||'').slice(0,18)+'  x'+(i.qty||1),moneyT(i.price*(i.qty||1)))); });
+  t.push(line('-'));
+  if(order.discount) t.push(row('Discount','-'+moneyT(order.discount)));
+  t.push(row('TOTAL',moneyT(order.netTotal!=null?order.netTotal:order.total)));
+  t.push('Pay: '+(order.pay||order.payMethod||'Cash'));
+  t.push(line('-')); t.push(center('Dhanyavaad! Jai Ambe')); t.push(line('*')); t.push('');
+  return t.join('\n');
+}
+function send(printer,content,copies){
+  return fetch('/api/print',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({printer:printer,content:content,copies:copies||1})})
+    .then(function(r){ return r.json(); });
+}
+
+/* ── rule matching ── */
+function tokenMatch(token,tableNo){
+  token=String(token).trim(); if(!token) return false;
+  var t=String(tableNo==null?'':tableNo).trim();
+  var m=token.match(/^(\d+)\s*-\s*(\d+)$/);
+  if(m){ var n=parseInt(t,10); return !isNaN(n)&&n>=parseInt(m[1],10)&&n<=parseInt(m[2],10); }
+  return token.toUpperCase()===t.toUpperCase();
+}
+function ruleMatchesTable(rule,tableNo){
+  return String(rule.cond||'').split(',').some(function(tok){ return tokenMatch(tok,tableNo); });
+}
+function isParcel(order){
+  if(order&&order.orderType==='parcel') return true;
+  var t=String((order&&(order.train||order.table))||'');
+  if(/^p/i.test(t)) return true;
+  try{
+    var all=(typeof allTables!=='undefined')?allTables:{};
+    for(var k in all){ if(String(all[k].number)===t) return /parcel/i.test(all[k].section||''); }
+  }catch(e){}
+  return false;
+}
+function activeRules(type){ return cfg().rules.filter(function(r){ return r.type===type && r.printer; }); }
+function printerForItem(order,item){
+  var tr=activeRules('table').find(function(r){ return ruleMatchesTable(r,order.train||order.table); });
+  if(tr) return tr.printer;
+  var cr=activeRules('category').find(function(r){ return String(r.cond||'').toLowerCase()===String(item.cat||'').toLowerCase(); });
+  if(cr) return cr.printer;
+  var want=isParcel(order)?'parcel':'dinein';
+  var or_=activeRules('ordertype').find(function(r){ return r.cond===want; });
+  if(or_) return or_.printer;
+  return cfg().def||'';
+}
+function printerForBill(order){
+  var want=isParcel(order)?'parcel':'dinein';
+  var or_=activeRules('ordertype').find(function(r){ return r.cond===want; });
+  if(or_) return or_.printer;
+  return cfg().def||'';
+}
+/* route computation (bina print kiye) — live preview + tests ke liye */
+function computeRoute(order,items){
+  var groups={};
+  (items||[]).forEach(function(it){
+    var p=printerForItem(order,it)||'(no printer)';
+    (groups[p]=groups[p]||[]).push(it);
+  });
+  return {kot:groups, bill:printerForBill(order)||'(no printer)'};
+}
+function proOn(){
+  var c=cfg();
+  return !!(c.on && isHttp() && (c.def || c.rules.some(function(r){ return r.printer; })));
+}
+
+/* ── engine wraps (outermost layer; OFF → exact purana behavior) ── */
+function findTicket(id){
+  try{
+    if(typeof v22State!=='undefined' && v22State && v22State.kotOrders){
+      var k=v22State.kotOrders.find(function(t){ return t.id===id; }); if(k) return k;
+    }
+    if(typeof state!=='undefined' && state.kotTickets){
+      return state.kotTickets.find(function(t){ return t.id===id; });
+    }
+  }catch(e){}
+  return null;
+}
+function routeKOT(id){
+  var k=findTicket(id); if(!k) return false;
+  var order={id:k.orderId||k.id, train:k.table||k.train||k.trainNo, time:k.time, orderType:k.orderType};
+  var route=computeRoute(order,k.items||[]);
+  var printers=Object.keys(route.kot).filter(function(p){ return p!=='(no printer)'; });
+  if(!printers.length) return false;                    /* koi printer resolve nahi → purane engine par jao */
+  printers.forEach(function(p){
+    send(p,kotText(order,friendly(p),route.kot[p]))
+      .then(function(j){ if(j&&j.ok&&!j.queued) sToast('🖨️ KOT → '+friendly(p)+' (T'+(order.train||'-')+')'); })
+      .catch(function(){});
+  });
+  try{ if(window.JASEC) JASEC.log('KOT Printed (Pro Routing)',{detail:'#'+order.id+' → '+printers.map(friendly).join(', '),skipReason:true}); }catch(e){}
+  return true;
+}
+function routeBill(order){
+  var p=printerForBill(order);
+  if(!p) return false;
+  var copies=1;
+  try{ var m=JSON.parse(localStorage.getItem('ja_v28_printmap')||'{}'); copies=m.billCopies||1; }catch(e){}
+  send(p,billText(order),copies)
+    .then(function(j){ if(j&&j.ok&&!j.queued) sToast('🧾 Bill → '+friendly(p)); })
+    .catch(function(){});
+  try{ if(window.JASEC) JASEC.log('Bill Printed (Pro Routing)',{detail:'#'+(order.id||'')+' → '+friendly(p),skipReason:true}); }catch(e){}
+  return true;
+}
+if(typeof window.printKOT==='function'){
+  var _prevKOT=window.printKOT;
+  window.printKOT=function(id){
+    if(proOn()){ try{ if(routeKOT(id)) return; }catch(e){} }
+    return _prevKOT.apply(this,arguments);
+  };
+}
+if(typeof window.printBill==='function'){
+  var _prevBill=window.printBill;
+  window.printBill=function(order){
+    if(proOn() && order){ try{ if(routeBill(order)) return; }catch(e){} }
+    return _prevBill.apply(this,arguments);
+  };
+}
+
+/* ── UI: Settings card ── */
+var detected=[];
+function cats(){
+  try{ return (typeof v22Categories!=='undefined'&&v22Categories)?v22Categories.map(function(c){return c.name;}):[]; }catch(e){ return []; }
+}
+function printerOpts(sel){
+  var c=cfg();
+  var known={}; detected.forEach(function(p){ known[p]=1; }); Object.keys(c.names).forEach(function(p){ known[p]=1; });
+  if(c.def) known[c.def]=1;
+  c.rules.forEach(function(r){ if(r.printer) known[r.printer]=1; });
+  return '<option value="">— chuno —</option>'+Object.keys(known).map(function(p){
+    return '<option value="'+esc(p)+'"'+(p===sel?' selected':'')+'>'+esc(friendly(p))+(c.names[p]?(' ('+esc(p).slice(0,18)+')'):'')+'</option>';
+  }).join('');
+}
+function condHTML(rule,idx){
+  if(rule.type==='category'){
+    return '<select class="ctrl" data-f="cond" data-i="'+idx+'" style="min-width:130px">'+
+      '<option value="">— category —</option>'+cats().map(function(cn){
+        return '<option value="'+esc(cn)+'"'+(cn===rule.cond?' selected':'')+'>'+esc(cn)+'</option>'; }).join('')+'</select>';
+  }
+  if(rule.type==='ordertype'){
+    return '<select class="ctrl" data-f="cond" data-i="'+idx+'" style="min-width:130px">'+
+      '<option value="dinein"'+(rule.cond==='dinein'?' selected':'')+'>🍽️ Dine-in</option>'+
+      '<option value="parcel"'+(rule.cond==='parcel'?' selected':'')+'>📦 Parcel</option></select>';
+  }
+  return '<input type="text" class="ctrl" data-f="cond" data-i="'+idx+'" value="'+esc(rule.cond||'')+'" placeholder="1-10 ya F1,F2,21B" style="min-width:130px">';
+}
+function renderCard(){
+  var host=document.getElementById('v29pr-pro-body'); if(!host) return;
+  var c=cfg();
+  var h='';
+  h+='<label style="display:flex;align-items:center;gap:9px;font-weight:800;font-size:13px;margin-bottom:12px;cursor:pointer">'+
+     '<input type="checkbox" id="v29pr-on" '+(c.on?'checked':'')+' style="width:18px;height:18px;accent-color:var(--brand,#077a57)"> Pro Routing ON'+
+     ' <span style="font-weight:400;font-size:11px;color:var(--muted)">(OFF = purana station-wala system chalega, kuch nahi badlega)</span></label>';
+  /* 1. detected printers + friendly names */
+  h+='<div style="font-weight:800;font-size:12.5px;margin:6px 0">1️⃣ Printers &amp; Naam</div>';
+  h+='<button type="button" class="btn btn-ghost btn-sm" onclick="v29pr.detect()">🔍 Detect Printers</button>';
+  h+='<div id="v29pr-plist" style="margin:8px 0">';
+  var plist=detected.length?detected:Object.keys(c.names);
+  if(plist.length){
+    h+='<table style="width:100%;border-collapse:collapse;font-size:12px">';
+    h+='<tr><th style="text-align:left;padding:4px;color:var(--muted);font-size:10.5px">WINDOWS PRINTER</th><th style="text-align:left;padding:4px;color:var(--muted);font-size:10.5px">FRIENDLY NAAM</th><th></th></tr>';
+    plist.forEach(function(p){
+      h+='<tr><td style="padding:4px;font-family:monospace;font-size:11px">'+esc(p)+'</td>'+
+        '<td style="padding:4px"><input type="text" class="ctrl" data-pname="'+esc(p)+'" value="'+esc(c.names[p]||'')+'" placeholder="jaise: Kitchen Printer" style="width:150px"></td>'+
+        '<td style="padding:4px"><button type="button" class="btn btn-ghost btn-sm" onclick="v29pr.testPrint(\''+esc(p).replace(/'/g,"\\'")+'\')">🖨️ Test</button></td></tr>';
+    });
+    h+='</table>';
+  } else h+='<div style="font-size:11.5px;color:var(--muted)">Detect dabao — server se printer list aayegi</div>';
+  h+='</div>';
+  /* 2. rules */
+  h+='<div style="font-weight:800;font-size:12.5px;margin:12px 0 6px">2️⃣ Routing Rules <span style="font-weight:400;font-size:10.5px;color:var(--muted)">(priority: Table Range &gt; Category &gt; Order Type &gt; Default)</span></div>';
+  h+='<table style="width:100%;border-collapse:collapse;font-size:12px" id="v29pr-rules">';
+  if(c.rules.length) h+='<tr><th style="text-align:left;padding:4px;color:var(--muted);font-size:10.5px">RULE</th><th style="text-align:left;padding:4px;color:var(--muted);font-size:10.5px">CONDITION</th><th></th><th style="text-align:left;padding:4px;color:var(--muted);font-size:10.5px">PRINTER</th><th></th></tr>';
+  c.rules.forEach(function(r,i){
+    h+='<tr>'+
+      '<td style="padding:4px"><select class="ctrl" data-f="type" data-i="'+i+'">'+
+        '<option value="category"'+(r.type==='category'?' selected':'')+'>🍽️ Category</option>'+
+        '<option value="ordertype"'+(r.type==='ordertype'?' selected':'')+'>📦 Order Type</option>'+
+        '<option value="table"'+(r.type==='table'?' selected':'')+'>🪑 Table Range</option></select></td>'+
+      '<td style="padding:4px">'+condHTML(r,i)+'</td>'+
+      '<td style="padding:4px;font-weight:900">→</td>'+
+      '<td style="padding:4px"><select class="ctrl" data-f="printer" data-i="'+i+'">'+printerOpts(r.printer)+'</select></td>'+
+      '<td style="padding:4px"><button type="button" class="btn btn-ghost btn-sm" onclick="v29pr.delRule('+i+')">✕</button></td></tr>';
+  });
+  h+='</table>';
+  h+='<button type="button" class="btn btn-ghost btn-sm" onclick="v29pr.addRule()" style="margin:6px 0">➕ Add Rule</button>';
+  /* default */
+  h+='<div style="display:flex;gap:10px;align-items:center;margin:10px 0;padding:9px;background:var(--soft,#f5f8f6);border-radius:10px">'+
+     '<b style="font-size:12px">Default Printer (jab koi rule match na ho):</b>'+
+     '<select class="ctrl" id="v29pr-def">'+printerOpts(c.def)+'</select></div>';
+  /* 3. live preview */
+  h+='<div style="font-weight:800;font-size:12.5px;margin:12px 0 6px">3️⃣ Live Preview</div>'+
+     '<div id="v29pr-preview" style="font-size:12px;background:var(--soft,#f5f8f6);border-radius:10px;padding:10px;line-height:1.8"></div>';
+  h+='<div style="margin-top:12px"><button type="button" class="btn btn-brand btn-sm" onclick="v29pr.save()">💾 Save Routing (Admin PIN)</button></div>';
+  host.innerHTML=h;
+  host.querySelectorAll('[data-f]').forEach(function(el){
+    el.onchange=function(){
+      var i=parseInt(el.getAttribute('data-i'),10), f=el.getAttribute('data-f');
+      var c2=cfg(); if(!c2.rules[i]) return;
+      c2.rules[i][f]=el.value;
+      if(f==='type'){ c2.rules[i].cond=(el.value==='ordertype')?'dinein':''; }
+      saveDraft(c2); renderCard();
+    };
+  });
+  host.querySelectorAll('[data-pname]').forEach(function(el){
+    el.onchange=function(){ var c2=cfg(); c2.names[el.getAttribute('data-pname')]=el.value.trim(); saveDraft(c2); renderPreview(); };
+  });
+  var defSel=document.getElementById('v29pr-def');
+  if(defSel) defSel.onchange=function(){ var c2=cfg(); c2.def=defSel.value; saveDraft(c2); renderPreview(); };
+  var onCb=document.getElementById('v29pr-on');
+  if(onCb) onCb.onchange=function(){ var c2=cfg(); c2.on=onCb.checked; saveDraft(c2); renderPreview(); };
+  renderPreview();
+}
+/* draft = bina PIN turant localStorage me (sirf UI state), Save = guard + config-push + log */
+function saveDraft(c){ saveCfg(c); }
+function renderPreview(){
+  var el=document.getElementById('v29pr-preview'); if(!el) return;
+  var cList=cats();
+  var sampleItems=[
+    {name:'Paneer Tikka', qty:1, cat:cList[2]||cList[0]||'Starters'},
+    {name:'Cold Drink', qty:2, cat:'Beverages'}
+  ];
+  var o1={id:'PREVIEW',train:'5',time:'12:30 pm'};
+  var o2={id:'PREVIEW',train:'p36',time:'12:30 pm',orderType:'parcel'};
+  var r1=computeRoute(o1,sampleItems), r2=computeRoute(o2,sampleItems);
+  function fmt(route){
+    return Object.keys(route.kot).map(function(p){
+      return '<b>'+esc(friendly(p))+'</b> ← '+route.kot[p].map(function(i){ return esc(i.name); }).join(', ');
+    }).join('<br>')+'<br>Bill → <b>'+esc(friendly(route.bill))+'</b>';
+  }
+  el.innerHTML='🪑 <u>Table 5</u> par Paneer Tikka + Cold Drink:<br>'+fmt(r1)+
+    '<br><br>📦 <u>Parcel (p36)</u> same order:<br>'+fmt(r2)+
+    (proOn()?'':'<br><br><i style="color:var(--muted)">⚠️ Pro Routing abhi OFF hai — enable karke Save karo tabhi lagoo hoga</i>');
+}
+window.v29pr={
+  detect:function(){
+    fetch('/api/printers',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }).then(function(j){
+      detected=(j&&j.printers)||[];
+      sToast(detected.length?('🟢 '+detected.length+' printers mile'):'🔴 Koi printer nahi mila','info');
+      renderCard();
+    }).catch(function(){ sToast('🔴 Server se printer list nahi aayi','error'); });
+  },
+  testPrint:function(p){
+    send(p,line('*')+'\n'+center('TEST PRINT')+'\n'+center(friendly(p))+'\n'+center(new Date().toLocaleString('en-IN'))+'\n'+line('*')+'\n')
+      .then(function(j){ sToast(j&&j.ok?('🖨️ Test bheja → '+friendly(p)):'Print fail','info'); })
+      .catch(function(){ sToast('Print fail','error'); });
+  },
+  addRule:function(){ var c=cfg(); c.rules.push({id:'r'+Date.now().toString(36),type:'category',cond:'',printer:''}); saveCfg(c); renderCard(); },
+  delRule:function(i){ var c=cfg(); c.rules.splice(i,1); saveCfg(c); renderCard(); },
+  save:function(){
+    var doSave=function(){
+      var c=cfg();
+      try{ if(window.JASEC) JASEC.log('Printer Routing Changed',{detail:c.rules.length+' rules · default: '+(c.def||'—')+' · '+(c.on?'ON':'OFF'),skipReason:true}); }catch(e){}
+      /* server config me bhi push — doosre devices same routing dekhen */
+      try{ fetch('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({config:{printcfg:c}})}).catch(function(){}); }catch(e2){}
+      sToast('💾 Printer routing save ho gayi','success');
+      renderPreview();
+    };
+    if(window.JASEC) JASEC.guard('prn.mapping',{title:'Printer Routing Change',skipReason:true},doSave);
+    else doSave();
+  },
+  _route:computeRoute, _proOn:proOn, _isParcel:isParcel   /* test/preview hooks */
+};
+
+function injectCard(){
+  var pg=document.getElementById('pg-settings');
+  if(!pg || document.getElementById('v29pr-pro-card')) return;
+  var wrap=pg.querySelector('.wrap'); if(!wrap) return;
+  var card=document.createElement('div');
+  card.className='card'; card.id='v29pr-pro-card';
+  card.innerHTML='<div class="card-h">🖨️ Printer Routing Pro <span style="font-size:10px;background:var(--brand,#077a57);color:#fff;border-radius:999px;padding:2px 8px;margin-left:6px">PETPOOJA-STYLE</span></div>'+
+    '<p style="font-size:12px;color:var(--muted);margin-bottom:10px">Saaf rules table: "Kitchen items → Printer 1", "Parcel → Printer 3". Ek order me alag stations ke items alag printers par apne-aap split hoke chhapte hain.</p>'+
+    '<div id="v29pr-pro-body"></div>';
+  var old=document.getElementById('v28pr-card');
+  if(old && old.parentNode===wrap && old.nextSibling) wrap.insertBefore(card,old.nextSibling);
+  else wrap.appendChild(card);
+  renderCard();
+}
+if(typeof window.onShow==='function'){
+  var _prev=window.onShow;
+  window.onShow=function(pg){
+    var r=_prev.apply(this,arguments);
+    if(pg==='settings') setTimeout(injectCard,140);
+    return r;
+  };
+}
+setTimeout(injectCard,1700);
+console.log('🖨️ [v29b] Printer Routing Pro loaded (rules: '+cfg().rules.length+', '+(cfg().on?'ON':'OFF')+')');
+})();
+</script>
 </body>
 </html>
