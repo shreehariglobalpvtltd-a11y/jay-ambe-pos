@@ -2246,7 +2246,7 @@ function billDocHead(){
     'hr.s{border-top:1.5px solid #000;margin:1mm 0}'+
     '.bill-slip{page-break-after:always}'+
     '.bill-slip:last-child{page-break-after:auto}'+
-    'img.plogo{filter:grayscale(1) contrast(3) brightness(0.15);-webkit-filter:grayscale(1) contrast(3) brightness(0.15)}'+
+    'img.plogo{filter:grayscale(1) contrast(1.8);-webkit-filter:grayscale(1) contrast(1.8)}'+
     '</style>';
 }
 
@@ -2292,7 +2292,7 @@ function buildBillBody(order,_unused){
   var phLine=bPh1; if(bPh2) phLine+=' / '+bPh2;
 
   return '<div class="bill-slip">'+
-    (logoSrc?'<div style="text-align:center;margin-bottom:1mm"><img class="plogo" src="'+logoSrc+'" style="width:14mm;height:14mm;object-fit:contain;display:inline-block;border-radius:4px"></div>':'')+
+    (logoSrc?'<div style="text-align:center;margin-bottom:1mm"><img class="plogo" src="'+logoSrc+'" style="width:'+(parseInt(bs.logoSize,10)||18)+'mm;height:'+(parseInt(bs.logoSize,10)||18)+'mm;object-fit:contain;display:inline-block;border-radius:4px"></div>':'')+
     '<div style="text-align:center;font-size:10pt;font-weight:bold;letter-spacing:.5px;line-height:1.2;text-transform:uppercase">'+escHtml(bName)+'</div>'+
     '<div style="text-align:center;font-size:7pt;line-height:1.3;margin-top:.3mm">'+addrHtml+'<br>Ph: '+escHtml(phLine)+'<br>FSSAI: '+escHtml(bFssai)+'<br>GST: '+escHtml(bGst)+'</div>'+
     '<hr>'+
@@ -5559,7 +5559,7 @@ function printKOT(id) {
     'Time: ' + new Date(k.ts).toLocaleTimeString('en-IN') + '\n================================\n' +
     k.items.map(function(i){ return '  x' + i.qty + '  ' + i.name + (i.note?' ('+i.note+')':''); }).join('\n') +
     '\n================================\n   JAY AMBE FAST FOOD 🙏\n================================';
-  w.document.write('<html><body><pre style="font-family:monospace;font-size:13px;padding:16px">' + body + '</pre></body></html>');
+  w.document.write('<html><head><style>@page{margin:0;size:80mm auto}body{margin:0;padding:2mm;width:80mm;background:#fff;color:#000}pre{font-family:"Courier New",Courier,monospace;font-size:10pt;font-weight:900;line-height:1.25;white-space:pre-wrap;margin:0}</style></head><body><pre>' + body + '</pre></body></html>');
   w.print(); w.close();
   v22Toast('🖨️ KOT sent to printer', 'success', 1800);
 }
@@ -17128,6 +17128,1115 @@ snapshot();                                   /* baseline: sirf NAYE changes pus
 injectCard(); renderBadge();
 setTimeout(function(){ renderDashBillerCard(); },1800);
 console.log('💼 [v31] Biller Hub ready — biller: '+(myBiller()?myBiller().name:'(not set)')+' · dev '+myDev);
+})();
+</script>
+
+<style id="v31pc-style">
+/* ═══ v31 PRINTER CENTER — Petpooja "Printer Listing" se 2 level upar ═══ */
+.v31pc-row{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1.5px solid var(--line,#e3e8ee);border-radius:16px;margin-bottom:12px;background:var(--card,#fff);flex-wrap:wrap;transition:.15s}
+.v31pc-row:hover{box-shadow:0 6px 22px rgba(0,0,0,.07);border-color:var(--brand,#0a9e5c)}
+.v31pc-icon{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--brand,#0a9e5c),#077a57);display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;flex:0 0 auto;box-shadow:0 4px 12px rgba(10,158,92,.25)}
+.v31pc-main{flex:1;min-width:220px}
+.v31pc-name{font-weight:800;font-size:14.5px;font-family:'Sora',sans-serif;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.v31pc-real{font-size:10.5px;color:var(--muted,#8a949e);font-family:monospace;margin-top:2px;word-break:break-all}
+.v31pc-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
+.v31pc-chip{font-size:10px;font-weight:800;padding:3px 9px;border-radius:999px;letter-spacing:.3px}
+.v31pc-chip.kot{background:#fff3e2;color:#b25e00}
+.v31pc-chip.bill{background:#e3f7ec;color:#0a7d46}
+.v31pc-chip.stn{background:#e8efff;color:#2456c4}
+.v31pc-chip.tbl{background:#f3e8ff;color:#7b2fae}
+.v31pc-chip.off{background:var(--soft,#f2f5f7);color:var(--muted,#8a949e)}
+.v31pc-ctrl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.v31pc-ctrl label{font-size:10px;font-weight:800;color:var(--muted,#8a949e);text-transform:uppercase;letter-spacing:.4px}
+.v31pc-sel{padding:7px 9px;border:1.5px solid var(--line,#dfe5eb);border-radius:9px;font-size:12px;font-family:inherit;background:var(--card,#fff);color:inherit;font-weight:700}
+.v31pc-onchip{font-size:11px;font-weight:800;padding:5px 11px;border-radius:999px}
+.v31pc-empty{padding:30px;text-align:center;color:var(--muted,#8a949e);font-size:13px;line-height:1.7}
+#v31-nav-printers{white-space:nowrap}
+</style>
+<script id="v31-printer-center">
+/* ═══════════════════════════════════════════════════════════════════
+   JAY AMBE POS v31 — PRINTER CENTER
+   Petpooja "Printer Listing" jaisa dedicated page — but 2 level better:
+   - Unlimited printers (auto-detect + manual network/share names)
+   - Har printer: friendly naam, width (58/80mm), copies, TEST print
+   - "Assigned for" chips (KOT rules / Bill / Stations / Tables) ek nazar me
+   - Purane दोनों cards (v28 station map + v29 routing rules) isi page par
+   - Width/copies shared config me sync → har PC same setting
+   ═══════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+if(window.__v31PrinterCenter) return; window.__v31PrinterCenter=true;
+var url=new URLSearchParams(location.search);
+if(url.get('role')==='menu'||url.get('menu')==='1') return;
+var origin=(/^https?:$/.test(location.protocol))?location.origin:'';
+function esc(s){ return (typeof escHtml==='function')?escHtml(s):String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function toastSafe(m,t){ try{ if(typeof toast==='function') return toast(m,t); }catch(e){} }
+function attr(s){ return String(s==null?'':s).replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+/* ── per-printer meta: width (chars), copies, manual list — shared via config ── */
+var META_LS='ja_v31_printers';
+function meta(){
+  var m; try{ m=JSON.parse(localStorage.getItem(META_LS))||{}; }catch(e){ m={}; }
+  m.meta=m.meta||{}; m.manual=m.manual||[]; return m;
+}
+function saveMeta(m,push){
+  m.updatedAt=Date.now();
+  try{ localStorage.setItem(META_LS,JSON.stringify(m)); }catch(e){}
+  if(push&&origin) fetch(origin+'/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({config:{v31printers:m}})}).catch(function(){});
+}
+window.v31PrinterWidth=function(p){ var x=meta().meta[p]; return (x&&x.w)||32; };
+window.v31PrinterCopies=function(p){ var x=meta().meta[p]; return (x&&x.copies)||1; };
+
+/* ── read the two existing routing configs (draft-level, बिना guard) ── */
+function proCfg(){ var c; try{ c=JSON.parse(localStorage.getItem('ja29_printcfg'))||{}; }catch(e){ c={}; } c.names=c.names||{}; c.rules=c.rules||[]; c.def=c.def||''; return c; }
+function mapCfg(){ var m; try{ m=JSON.parse(localStorage.getItem('ja_v28_printmap'))||{}; }catch(e){ m={}; } m.stations=m.stations||{}; m.tables=m.tables||{}; return m; }
+function setBillPrinter(p){
+  var m=mapCfg(); m.bill=p; m.enabled=true;
+  try{ localStorage.setItem('ja_v28_printmap',JSON.stringify(m)); }catch(e){}
+  if(origin) fetch(origin+'/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({config:{printmap:m}})}).catch(function(){});
+  toastSafe('🧾 Bill printer set: '+p);
+  if(window.JASEC&&JASEC.log){ try{ JASEC.log('Bill Printer Set',{detail:p,skipReason:true}); }catch(e){} }
+  render();
+}
+
+/* ── printer universe: detected + manual + हर config me use hue naam ── */
+var detected=[], serverUp=false;
+function allPrinters(){
+  var seen={}, out=[];
+  function add(p){ p=String(p||'').trim(); if(!p||seen[p]) return; seen[p]=1; out.push(p); }
+  detected.forEach(add);
+  meta().manual.forEach(add);
+  var pc=proCfg(); Object.keys(pc.names).forEach(add); if(pc.def) add(pc.def);
+  pc.rules.forEach(function(r){ if(r.printer) add(r.printer); });
+  var mc=mapCfg(); if(mc.bill) add(mc.bill);
+  Object.keys(mc.stations).forEach(function(s){ if(mc.stations[s]) add(mc.stations[s]); });
+  Object.keys(mc.tables).forEach(function(t){ if(mc.tables[t]) add(mc.tables[t]); });
+  return out;
+}
+function assignChips(p){
+  var chips=[];
+  var pc=proCfg(), mc=mapCfg();
+  var kotRules=pc.rules.filter(function(r){ return r.printer===p&&(r.type==='category'||r.type==='table'); }).length;
+  var otRules=pc.rules.filter(function(r){ return r.printer===p&&r.type==='ordertype'; }).length;
+  if(kotRules) chips.push('<span class="v31pc-chip kot">KOT · '+kotRules+' rule'+(kotRules>1?'s':'')+'</span>');
+  if(otRules) chips.push('<span class="v31pc-chip kot">Order-type · '+otRules+'</span>');
+  if(pc.def===p) chips.push('<span class="v31pc-chip kot">KOT Default</span>');
+  if(mc.bill===p) chips.push('<span class="v31pc-chip bill">🧾 BILL</span>');
+  var stns=Object.keys(mc.stations).filter(function(s){ return mc.stations[s]===p; });
+  if(stns.length) chips.push('<span class="v31pc-chip stn">Station: '+esc(stns.join(', '))+'</span>');
+  var tbls=Object.keys(mc.tables).filter(function(t){ return mc.tables[t]===p; }).length;
+  if(tbls) chips.push('<span class="v31pc-chip tbl">🪑 '+tbls+' tables</span>');
+  if(!chips.length) chips.push('<span class="v31pc-chip off">Abhi kahin assign nahi</span>');
+  return chips.join('');
+}
+
+/* ── page + nav injection ── */
+function injectPage(){
+  if(document.getElementById('pg-printers')) return;
+  var ref=document.getElementById('pg-settings'); if(!ref||!ref.parentNode) return;
+  var pg=document.createElement('div'); pg.id='pg-printers'; pg.className='page';
+  pg.innerHTML='<div class="wrap">'+
+    '<div class="card"><div class="card-h">🖨️ Printer Center '+
+      '<span style="font-size:10px;background:var(--brand,#0a9e5c);color:#fff;border-radius:999px;padding:2px 8px;margin-left:6px">PRO</span>'+
+      '<span id="v31pc-status" style="font-size:11px;font-weight:800;margin-left:auto"></span></div>'+
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">'+
+        '<button type="button" class="btn btn-brand btn-sm" onclick="JAPC.detect()">🔍 Detect Printers</button>'+
+        '<button type="button" class="btn btn-ghost btn-sm" onclick="JAPC.addManual()">➕ Add Printer (naam se)</button>'+
+        '<button type="button" class="btn btn-ghost btn-sm" onclick="JAPC.saveAll()">💾 Save Widths/Copies (sab PC sync)</button>'+
+      '</div>'+
+      '<div id="v31pc-list"><div class="v31pc-empty">🔍 Detect dabao — is PC ke saare printers aa jayenge<br>ya "Add Printer" se network printer ka naam daalo</div></div>'+
+    '</div>'+
+    '<div id="v31pc-hosts"></div>'+
+  '</div>';
+  ref.parentNode.insertBefore(pg,ref);
+  var navEl=document.querySelector('.nav');
+  if(navEl&&!document.getElementById('v31-nav-printers')){
+    var btn=document.createElement('button'); btn.id='v31-nav-printers';
+    btn.setAttribute('data-pg','printers'); btn.innerHTML='🖨️ <span>Printers</span>';
+    btn.onclick=function(){ try{ window.nav(btn); }catch(e){} };
+    var sBtn=navEl.querySelector('button[data-pg="settings"]');
+    navEl.insertBefore(btn,sBtn||null);
+  }
+}
+function moveCards(){
+  var hosts=document.getElementById('v31pc-hosts'); if(!hosts) return;
+  ['v28pr-card','v29pr-pro-card'].forEach(function(id){
+    var n=document.getElementById(id);
+    if(n&&n.parentNode!==hosts) hosts.appendChild(n);
+  });
+  /* settings me chhota pointer card */
+  var sp=document.getElementById('pg-settings');
+  if(sp&&!document.getElementById('v31pc-stub')){
+    var wrap=sp.querySelector('.wrap');
+    if(wrap){
+      var stub=document.createElement('div'); stub.className='card'; stub.id='v31pc-stub';
+      stub.innerHTML='<div class="card-h">🖨️ Printers</div><div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Printer detect, naam, width, copies, KOT/Bill routing — sab ab ek jagah.</div>'+
+        '<button type="button" class="btn btn-brand btn-sm" onclick="nav2(\'printers\')">🖨️ Printer Center kholo</button>';
+      wrap.appendChild(stub);
+    }
+  }
+}
+
+/* ── render list ── */
+function render(){
+  var host=document.getElementById('v31pc-list'); if(!host) return;
+  var st=document.getElementById('v31pc-status');
+  if(st) st.innerHTML=serverUp
+    ?'<span class="v31pc-onchip" style="background:#e3f7ec;color:#0a7d46">🟢 Server LIVE</span>'
+    :'<span class="v31pc-onchip" style="background:#fdeaea;color:#c0392b">🔴 Server nahi mila — START_POS.bat</span>';
+  var ps=allPrinters();
+  if(!ps.length){ host.innerHTML='<div class="v31pc-empty">🔍 Detect dabao — is PC ke saare printers aa jayenge<br>ya "Add Printer" se network printer ka naam daalo</div>'; return; }
+  var m=meta(), pc=proCfg();
+  host.innerHTML=ps.map(function(p){
+    var mm=m.meta[p]||{}; var w=mm.w||32, cp=mm.copies||1;
+    var manual=m.manual.indexOf(p)>=0, live=detected.indexOf(p)>=0;
+    return '<div class="v31pc-row">'+
+      '<div class="v31pc-icon">🖨️</div>'+
+      '<div class="v31pc-main">'+
+        '<div class="v31pc-name"><input class="v31-inp" data-pcn="'+attr(p)+'" value="'+attr(pc.names[p]||'')+'" placeholder="Friendly naam (jaise: Kitchen)" style="width:170px;font-weight:800">'+
+          (live?'<span class="v31pc-chip bill">● online</span>':(manual?'<span class="v31pc-chip stn">manual</span>':'<span class="v31pc-chip off">saved</span>'))+'</div>'+
+        '<div class="v31pc-real">'+esc(p)+'</div>'+
+        '<div class="v31pc-chips">'+assignChips(p)+'</div>'+
+      '</div>'+
+      '<div class="v31pc-ctrl">'+
+        '<label>Paper</label><select class="v31pc-sel" data-pcw="'+attr(p)+'">'+
+          '<option value="32"'+(w===32?' selected':'')+'>58mm (32)</option>'+
+          '<option value="42"'+(w===42?' selected':'')+'>80mm (42)</option>'+
+          '<option value="48"'+(w===48?' selected':'')+'>80mm wide (48)</option></select>'+
+        '<label>Copies</label><select class="v31pc-sel" data-pcc="'+attr(p)+'">'+
+          [1,2,3].map(function(n){ return '<option value="'+n+'"'+(cp===n?' selected':'')+'>'+n+'</option>'; }).join('')+'</select>'+
+        '<button type="button" class="btn btn-ghost btn-sm" onclick="JAPC.test(this.getAttribute(\'data-p\'))" data-p="'+attr(p)+'">🖨️ Test</button>'+
+        '<button type="button" class="btn btn-ghost btn-sm" onclick="JAPC.makeBill(this.getAttribute(\'data-p\'))" data-p="'+attr(p)+'">🧾 Bill Printer banao</button>'+
+        (manual?'<button type="button" class="btn btn-ghost btn-sm" onclick="JAPC.delManual(this.getAttribute(\'data-p\'))" data-p="'+attr(p)+'">🗑️</button>':'')+
+      '</div>'+
+    '</div>';
+  }).join('');
+  host.querySelectorAll('[data-pcn]').forEach(function(inp){
+    inp.onchange=function(){
+      var c=proCfg(); c.names[inp.getAttribute('data-pcn')]=inp.value.trim();
+      try{ localStorage.setItem('ja29_printcfg',JSON.stringify(c)); }catch(e){}
+      toastSafe('✏️ Naam saved (routing me bhi dikhega)');
+    };
+  });
+  host.querySelectorAll('[data-pcw]').forEach(function(sel){
+    sel.onchange=function(){ var mm=meta(); var p=sel.getAttribute('data-pcw'); mm.meta[p]=mm.meta[p]||{}; mm.meta[p].w=parseInt(sel.value,10)||32; saveMeta(mm,false); };
+  });
+  host.querySelectorAll('[data-pcc]').forEach(function(sel){
+    sel.onchange=function(){ var mm=meta(); var p=sel.getAttribute('data-pcc'); mm.meta[p]=mm.meta[p]||{}; mm.meta[p].copies=parseInt(sel.value,10)||1; saveMeta(mm,false); };
+  });
+}
+
+/* ── actions ── */
+window.JAPC={
+  detect:function(){
+    if(!origin){ toastSafe('🔴 File mode — START_POS.bat se kholo','error'); return; }
+    toastSafe('🔍 Printers dhoond raha hai…');
+    fetch(origin+'/api/printers',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }).then(function(j){
+      detected=(j&&j.printers)||[]; serverUp=true; render();
+      toastSafe(detected.length?('🟢 '+detected.length+' printer mile'):'⚠️ Koi printer nahi mila (Windows me printer add hai?)');
+    }).catch(function(){ serverUp=false; render(); toastSafe('🔴 Server se list nahi mili','error'); });
+  },
+  addManual:function(){
+    var p=prompt('Printer ka EXACT Windows naam (Control Panel → Printers me jaisa dikhta hai, ya \\\\PC\\shared naam):');
+    if(!p||!p.trim()) return;
+    var mm=meta(); p=p.trim();
+    if(mm.manual.indexOf(p)<0) mm.manual.push(p);
+    saveMeta(mm,true); render();
+    toastSafe('➕ Printer add hua: '+p);
+  },
+  delManual:function(p){
+    var mm=meta(); mm.manual=mm.manual.filter(function(x){ return x!==p; });
+    delete mm.meta[p]; saveMeta(mm,true); render();
+  },
+  test:function(p){
+    if(!origin){ toastSafe('🔴 Server chahiye test ke liye','error'); return; }
+    var w=window.v31PrinterWidth(p);
+    function ln(ch){ return new Array(w+1).join(ch); }
+    function ctr(s){ s=String(s); if(s.length>=w) return s.slice(0,w); return new Array(Math.floor((w-s.length)/2)+1).join(' ')+s; }
+    var t=[ln('*'),ctr('JAY AMBE POS'),ctr('PRINTER TEST'),ln('*'),
+      'Printer : '+p,
+      'Paper   : '+(w===32?'58mm':'80mm')+' ('+w+' chars)',
+      'Time    : '+new Date().toLocaleString('en-IN'),
+      ln('-'),ctr('|<--- is line ke andar sab --->|'),ln('-'),
+      ctr('Agar ye saaf dikh raha hai'),ctr('to printer READY hai ✓'),ln('*'),''].join('\n');
+    fetch(origin+'/api/print',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({printer:p,content:t,copies:1})})
+      .then(function(r){ return r.json(); })
+      .then(function(j){ toastSafe(j&&j.ok?('🖨️ Test gaya → '+p):('❌ Print fail: '+((j&&j.error)||'?')),j&&j.ok?undefined:'error'); })
+      .catch(function(){ toastSafe('❌ Server error','error'); });
+  },
+  makeBill:function(p){ setBillPrinter(p); },
+  saveAll:function(){
+    var mm=meta(); saveMeta(mm,true);
+    toastSafe('💾 Printer widths/copies sab PC par sync ho gaye');
+    if(window.JASEC&&JASEC.log){ try{ JASEC.log('Printer Meta Saved',{detail:Object.keys(mm.meta).length+' printers',skipReason:true}); }catch(e){} }
+  },
+  _render:render
+};
+
+/* ── remote config apply (dusre PC ne widths badle) ── */
+(function(){
+  if(!origin||!window.EventSource) return;
+  try{
+    var es2=new EventSource(origin+'/api/events');
+    es2.addEventListener('config',function(ev){
+      try{
+        var c=JSON.parse(ev.data);
+        if(c&&c.v31printers){
+          var cur=meta();
+          if((c.v31printers.updatedAt||0)>(cur.updatedAt||0)){
+            localStorage.setItem(META_LS,JSON.stringify(c.v31printers));
+            if(document.querySelector('#pg-printers.active')) render();
+          }
+        }
+      }catch(e){}
+    });
+  }catch(e){}
+})();
+
+/* ── hooks ── */
+if(typeof window.onShow==='function'){
+  var _show=window.onShow;
+  window.onShow=function(pg){
+    var r=_show.apply(this,arguments);
+    if(pg==='printers'){ try{ injectPage(); moveCards(); render(); if(!detected.length) JAPC.detect(); }catch(e){} }
+    if(pg==='settings'){ try{ injectPage(); moveCards(); }catch(e){} }
+    return r;
+  };
+}
+setTimeout(function(){
+  injectPage(); moveCards();
+  if(origin) fetch(origin+'/api/config',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }).then(function(j){
+    if(j&&j.config&&j.config.v31printers){
+      var cur=meta();
+      if((j.config.v31printers.updatedAt||0)>(cur.updatedAt||0)) localStorage.setItem(META_LS,JSON.stringify(j.config.v31printers));
+    }
+    serverUp=!!j;
+  }).catch(function(){});
+},2100);
+console.log('🖨️ [v31] Printer Center ready');
+})();
+</script>
+
+<style id="v31mp-style">
+/* ═══ v31 MENU MANAGER PRO ═══ */
+.v31mp-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}
+.v31mp-chip{padding:6px 13px;border-radius:999px;border:1.5px solid var(--line,#e3e8ee);font-size:12px;font-weight:800;cursor:pointer;background:var(--card,#fff);transition:.14s;user-select:none}
+.v31mp-chip:hover{border-color:var(--brand,#0a9e5c)}
+.v31mp-chip.on{background:var(--brand,#0a9e5c);color:#fff;border-color:var(--brand,#0a9e5c)}
+.v31mp-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.v31mp-tbl th{text-align:left;padding:8px 6px;font-size:10px;color:var(--muted,#8a949e);letter-spacing:.5px;border-bottom:2px solid var(--line,#e3e8ee);text-transform:uppercase;position:sticky;top:0;background:var(--card,#fff);z-index:1}
+.v31mp-tbl td{padding:5px 6px;border-bottom:1px solid var(--line,#eef1f4);vertical-align:middle}
+.v31mp-tbl tr:hover td{background:var(--soft,#f7faf8)}
+.v31mp-inp{width:100%;padding:7px 8px;border:1.5px solid transparent;border-radius:8px;font-size:12.5px;font-family:inherit;background:transparent;color:inherit;font-weight:600}
+.v31mp-inp:hover{border-color:var(--line,#dfe5eb);background:var(--card,#fff)}
+.v31mp-inp:focus{outline:none;border-color:var(--brand,#0a9e5c);background:var(--card,#fff)}
+.v31mp-num{max-width:78px;text-align:right;font-family:monospace;font-weight:800}
+.v31mp-sc{max-width:76px;font-family:monospace;text-transform:uppercase}
+.v31mp-veg{width:15px;height:15px;border:2px solid #0a9e5c;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.v31mp-veg::after{content:'';width:7px;height:7px;border-radius:50%;background:#0a9e5c}
+.v31mp-veg.nv{border-color:#c0392b}.v31mp-veg.nv::after{background:#c0392b}
+.v31mp-st{font-size:10px;font-weight:800;padding:4px 10px;border-radius:999px;cursor:pointer;letter-spacing:.4px;user-select:none}
+.v31mp-st.on{background:#e3f7ec;color:#0a7d46}
+.v31mp-st.off{background:#fdeaea;color:#c0392b}
+.v31mp-bulk{display:none;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 12px;background:var(--soft,#f2f7f4);border:1.5px dashed var(--brand,#0a9e5c);border-radius:12px;margin:8px 0}
+.v31mp-bulk.on{display:flex}
+.v31mp-scroll{max-height:560px;overflow:auto;border:1.5px solid var(--line,#e8ecf0);border-radius:12px}
+.item.v31-off-item{opacity:.35;filter:grayscale(1);pointer-events:none}
+</style>
+<script id="v31-menu-pro">
+/* ═══════════════════════════════════════════════════════════════════
+   JAY AMBE POS v31 — MENU MANAGER PRO (Petpooja se 2 level upar)
+   - Table view: inline edit (naam / category / price / cost / short code)
+   - Item ON/OFF (86) — OFF item billing + mobile menu me nahi dikhta
+   - Short code billing: search me "1d" + Enter → item seedha cart me
+   - Bulk: price +/- %, set price, category move, ON/OFF, delete
+   - CSV export/import (Excel me kholo, edit karo, wapas daalo)
+   - Menu LAN-sync: ek PC par edit → dusre PC + phone par turant
+   ═══════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+if(window.__v31MenuPro) return; window.__v31MenuPro=true;
+var url=new URLSearchParams(location.search);
+if(url.get('role')==='menu'||url.get('menu')==='1') return;
+var origin=(/^https?:$/.test(location.protocol))?location.origin:'';
+function esc(s){ return (typeof escHtml==='function')?escHtml(s):String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function attr(s){ return String(s==null?'':s).replace(/"/g,'&quot;'); }
+function toastSafe(m,t){ try{ if(typeof toast==='function') return toast(m,t); }catch(e){} }
+var sel={}, catFilter='All', applyingMenu=false, pushTimer=null;
+
+/* ── billing integration: OFF items hide + short-code quick add ── */
+if(typeof window.renderItems==='function'){
+  var _prevRI=window.renderItems;
+  window.renderItems=function(){
+    var real=state.menu, inp=document.getElementById('search');
+    var q=inp?(inp.value||'').trim().toLowerCase():'';
+    var scHit=q?real.filter(function(m){ return (m.sc||'').toLowerCase()===q&&!m.off; }):[];
+    try{
+      state.menu=scHit.length?scHit:real.filter(function(m){ return !m.off; });
+      if(scHit.length&&inp){ var ov=inp.value; inp.value=''; try{ return _prevRI.apply(this,arguments); } finally{ inp.value=ov; } }
+      return _prevRI.apply(this,arguments);
+    } finally { state.menu=real; }
+  };
+}
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Enter') return;
+  var inp=document.getElementById('search');
+  if(!inp||document.activeElement!==inp) return;
+  var q=(inp.value||'').trim().toLowerCase(); if(!q) return;
+  var m=state.menu.find(function(x){ return (x.sc||'').toLowerCase()===q&&!x.off; });
+  if(m&&typeof addToCart==='function'){
+    addToCart(m.id); inp.value=''; inp.focus();
+    try{ renderItems(); }catch(e2){}
+    toastSafe('⚡ '+m.name+' cart me (code '+(m.sc||'').toUpperCase()+')');
+    e.preventDefault();
+  }
+});
+
+/* ── menu LAN sync (dono biller PC + customer phone menu same rahe) ── */
+function pushMenu(){
+  if(!origin||applyingMenu) return;
+  if(pushTimer) clearTimeout(pushTimer);
+  pushTimer=setTimeout(function(){
+    pushTimer=null;
+    fetch(origin+'/api/menu',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({menu:state.menu})}).catch(function(){});
+  },600);
+}
+(function(){
+  if(!origin||!window.EventSource) return;
+  try{
+    var es3=new EventSource(origin+'/api/events');
+    es3.addEventListener('menu',function(){
+      fetch(origin+'/api/menu',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }).then(function(j){
+        if(!j||!Array.isArray(j.menu)||!j.menu.length) return;
+        if(JSON.stringify(j.menu)===JSON.stringify(state.menu)) return;   /* apna echo */
+        applyingMenu=true;
+        try{ state.menu=j.menu; if(typeof save==='function') save(); }catch(e){}
+        applyingMenu=false;
+        try{ if(document.querySelector('#pg-menu.active')) renderMenuManage(); if(document.querySelector('#pg-billing.active')){ renderCats(); renderItems(); } }catch(e){}
+        toastSafe('🍽️ Menu update aaya (dusre PC se)');
+      }).catch(function(){});
+    });
+  }catch(e){}
+})();
+
+/* ── pro table render (renderMenuManage ke upar) ── */
+function catList(){ var s={}; state.menu.forEach(function(m){ if(m.cat) s[m.cat]=true; }); return Object.keys(s).sort(); }
+function rowsData(){
+  var q=((document.getElementById('m-search')||{}).value||'').toLowerCase();
+  return state.menu.map(function(m,i){ return {m:m,i:i}; }).filter(function(o){
+    if(catFilter!=='All'&&(o.m.cat||'')!==catFilter) return false;
+    if(q&&o.m.name.toLowerCase().indexOf(q)<0&&String(o.m.sc||'').toLowerCase().indexOf(q)<0) return false;
+    return true;
+  });
+}
+function injectBar(){
+  var list=document.getElementById('menu-list'); if(!list||document.getElementById('v31mp-bar')) return;
+  var bar=document.createElement('div'); bar.id='v31mp-bar';
+  bar.innerHTML='<div class="v31mp-bar" id="v31mp-cats"></div>'+
+    '<div class="v31mp-bulk" id="v31mp-bulk">'+
+      '<b style="font-size:12px"><span id="v31mp-selcount">0</span> selected</b>'+
+      '<button type="button" class="btn btn-ghost btn-sm" onclick="JAMP.bulkPrice(1)">💹 Price +%</button>'+
+      '<button type="button" class="btn btn-ghost btn-sm" onclick="JAMP.bulkPrice(-1)">📉 Price −%</button>'+
+      '<button type="button" class="btn btn-ghost btn-sm" onclick="JAMP.bulkSet()">₹ Set Price</button>'+
+      '<button type="button" class="btn btn-ghost btn-sm" onclick="JAMP.bulkCat()">📂 Category →</button>'+
+      '<button type="button" class="btn btn-ghost btn-sm" onclick="JAMP.bulkOnOff(false)">🟢 ON</button>'+
+      '<button type="button" class="btn btn-ghost btn-sm" onclick="JAMP.bulkOnOff(true)">⛔ OFF</button>'+
+      '<button type="button" class="btn btn-red btn-sm" onclick="JAMP.bulkDel()">🗑️ Delete</button>'+
+      '<button type="button" class="btn btn-ghost btn-sm" onclick="JAMP.clearSel()" style="margin-left:auto">✕ Clear</button>'+
+    '</div>'+
+    '<div class="v31mp-bar">'+
+      '<button type="button" class="btn btn-ghost btn-sm" onclick="JAMP.csvOut()">⬇️ Excel/CSV Export</button>'+
+      '<label class="btn btn-ghost btn-sm" style="cursor:pointer">⬆️ CSV Import<input type="file" accept=".csv,text/csv" style="display:none" onchange="JAMP.csvIn(event)"></label>'+
+      '<span style="font-size:11px;color:var(--muted);margin-left:auto" id="v31mp-info"></span>'+
+    '</div>';
+  list.parentNode.insertBefore(bar,list);
+}
+function renderCatChips(){
+  var host=document.getElementById('v31mp-cats'); if(!host) return;
+  var cats=['All'].concat(catList());
+  host.innerHTML=cats.map(function(c){
+    var n=(c==='All')?state.menu.length:state.menu.filter(function(m){ return (m.cat||'')===c; }).length;
+    return '<span class="v31mp-chip'+(catFilter===c?' on':'')+'" onclick="JAMP.setCat(\''+attr(c).replace(/'/g,"\\'")+'\')">'+esc(c)+' <span style="opacity:.65;font-weight:700">'+n+'</span></span>';
+  }).join('');
+}
+function renderPro(){
+  var list=document.getElementById('menu-list'); if(!list) return;
+  injectBar(); renderCatChips();
+  var rows=rowsData();
+  var info=document.getElementById('v31mp-info');
+  if(info) info.textContent=rows.length+' items · inline edit: naam/price par click karo';
+  var cats=catList();
+  if(!rows.length){ list.innerHTML='<div class="empty">Koi item nahi. Upar form se add karo.</div>'; updateBulk(); return; }
+  list.innerHTML='<div class="v31mp-scroll"><table class="v31mp-tbl">'+
+    '<tr><th style="width:26px"><input type="checkbox" id="v31mp-selall" style="width:15px;height:15px"></th>'+
+    '<th style="width:26px">VEG</th><th>ITEM NAME</th><th style="width:130px">CATEGORY</th>'+
+    '<th style="width:80px">CODE</th><th style="width:84px">PRICE ₹</th><th style="width:84px">COST ₹</th>'+
+    '<th style="width:70px">STATUS</th><th style="width:60px"></th></tr>'+
+    rows.map(function(o){
+      var m=o.m, i=o.i;
+      return '<tr>'+
+        '<td><input type="checkbox" class="v31mp-ck" data-id="'+attr(m.id)+'"'+(sel[m.id]?' checked':'')+' style="width:15px;height:15px"></td>'+
+        '<td><span class="v31mp-veg'+(m.nonveg?' nv':'')+'" data-mf="veg" data-i="'+i+'" title="Veg/Non-veg toggle"></span></td>'+
+        '<td><input class="v31mp-inp" data-mf="name" data-i="'+i+'" value="'+attr(m.name)+'"></td>'+
+        '<td><select class="v31mp-inp" data-mf="cat" data-i="'+i+'">'+
+          '<option value=""'+(!m.cat?' selected':'')+'>—</option>'+
+          cats.map(function(c){ return '<option value="'+attr(c)+'"'+(m.cat===c?' selected':'')+'>'+esc(c)+'</option>'; }).join('')+
+          '<option value="__new">➕ nayi category…</option></select></td>'+
+        '<td><input class="v31mp-inp v31mp-sc" data-mf="sc" data-i="'+i+'" value="'+attr(m.sc||'')+'" placeholder="1D"></td>'+
+        '<td><input type="number" class="v31mp-inp v31mp-num" data-mf="price" data-i="'+i+'" value="'+(m.price||0)+'"></td>'+
+        '<td><input type="number" class="v31mp-inp v31mp-num" data-mf="cost" data-i="'+i+'" value="'+(m.costPrice||'')+'" placeholder="—"></td>'+
+        '<td><span class="v31mp-st '+(m.off?'off':'on')+'" data-mf="onoff" data-i="'+i+'">'+(m.off?'⛔ OFF':'🟢 ON')+'</span></td>'+
+        '<td style="white-space:nowrap"><button class="iconbtn" onclick="editItem('+i+')" title="Form me kholo">✏️</button>'+
+        '<button class="iconbtn" onclick="delItem('+i+')" title="Delete">🗑️</button></td>'+
+      '</tr>';
+    }).join('')+'</table></div>';
+  /* bindings */
+  var selAll=document.getElementById('v31mp-selall');
+  if(selAll) selAll.onchange=function(){ rows.forEach(function(o){ if(selAll.checked) sel[o.m.id]=1; else delete sel[o.m.id]; }); renderPro(); };
+  list.querySelectorAll('.v31mp-ck').forEach(function(ck){
+    ck.onchange=function(){ var id=ck.getAttribute('data-id'); if(ck.checked) sel[id]=1; else delete sel[id]; updateBulk(); };
+  });
+  list.querySelectorAll('[data-mf]').forEach(function(el){
+    var f=el.getAttribute('data-mf'), i=parseInt(el.getAttribute('data-i'),10);
+    if(f==='veg'||f==='onoff'){
+      el.onclick=function(){
+        var m=state.menu[i]; if(!m) return;
+        if(f==='veg') m.nonveg=!m.nonveg;
+        else m.off=!m.off;
+        commitMenu(f==='onoff'?(m.off?('⛔ '+m.name+' OFF (billing me nahi dikhega)'):('🟢 '+m.name+' wapas ON')):null);
+      };
+      return;
+    }
+    el.onchange=function(){
+      var m=state.menu[i]; if(!m) return;
+      var v=el.value;
+      if(f==='cat'&&v==='__new'){ var nc=prompt('Nayi category ka naam:'); if(nc&&nc.trim()){ m.cat=nc.trim(); } commitMenu(); return; }
+      if(f==='price'){ var p=parseFloat(v); if(isNaN(p)||p<0){ toastSafe('❌ Sahi price daalo','error'); renderPro(); return; } m.price=p; }
+      else if(f==='cost'){ m.costPrice=parseFloat(v)||0; }
+      else if(f==='sc'){ m.sc=v.trim().toUpperCase(); el.value=m.sc; }
+      else if(f==='name'){ if(!v.trim()){ toastSafe('❌ Naam khali nahi','error'); renderPro(); return; } m.name=v.trim(); }
+      else if(f==='cat'){ m.cat=v; }
+      commitMenu();
+    };
+  });
+  updateBulk();
+}
+function commitMenu(msg){
+  try{ if(typeof save==='function') save(); }catch(e){}
+  pushMenu();
+  if(msg) toastSafe(msg);
+  renderPro();
+  try{ if(typeof refreshCatList==='function') refreshCatList(); }catch(e){}
+  try{ if(document.querySelector('#pg-billing.active')){ renderCats(); renderItems(); } }catch(e){}
+}
+function updateBulk(){
+  var n=Object.keys(sel).length;
+  var b=document.getElementById('v31mp-bulk'); if(!b) return;
+  b.classList.toggle('on',n>0);
+  var c=document.getElementById('v31mp-selcount'); if(c) c.textContent=n;
+}
+function selItems(){ return state.menu.filter(function(m){ return sel[m.id]; }); }
+
+window.JAMP={
+  setCat:function(c){ catFilter=c; renderPro(); },
+  clearSel:function(){ sel={}; renderPro(); },
+  bulkPrice:function(dir){
+    var p=parseFloat(prompt('Kitne % '+(dir>0?'badhana':'ghatana')+' hai? (jaise 10)')); if(isNaN(p)||p<=0) return;
+    selItems().forEach(function(m){ m.price=Math.max(0,Math.round(m.price*(1+dir*p/100))); });
+    commitMenu('💹 '+Object.keys(sel).length+' items ka price '+(dir>0?'+':'−')+p+'%');
+    if(window.JASEC&&JASEC.log){ try{ JASEC.log('Bulk Price Change',{detail:Object.keys(sel).length+' items '+(dir>0?'+':'-')+p+'%',skipReason:true}); }catch(e){} }
+  },
+  bulkSet:function(){
+    var p=parseFloat(prompt('Naya price ₹ (selected sab par lagega):')); if(isNaN(p)||p<0) return;
+    selItems().forEach(function(m){ m.price=p; });
+    commitMenu('₹ '+Object.keys(sel).length+' items → '+p);
+  },
+  bulkCat:function(){
+    var c=prompt('Kaunsi category me daalna hai? (nayi bhi likh sakte ho)'); if(!c||!c.trim()) return;
+    selItems().forEach(function(m){ m.cat=c.trim(); });
+    commitMenu('📂 '+Object.keys(sel).length+' items → '+c.trim());
+  },
+  bulkOnOff:function(off){
+    selItems().forEach(function(m){ m.off=off; });
+    commitMenu(off?('⛔ '+Object.keys(sel).length+' items OFF'):('🟢 '+Object.keys(sel).length+' items ON'));
+  },
+  bulkDel:function(){
+    var n=Object.keys(sel).length; if(!n) return;
+    if(!confirm(n+' items DELETE karne hain? (wapas nahi aayenge)')) return;
+    var doDel=function(){
+      var names=selItems().map(function(m){ return m.name; }).slice(0,5).join(', ');
+      state.menu=state.menu.filter(function(m){ return !sel[m.id]; });
+      sel={};
+      commitMenu('🗑️ '+n+' items delete');
+      if(window.JASEC&&JASEC.log){ try{ JASEC.log('Bulk Menu Delete',{detail:n+' items: '+names+'…',skipReason:true}); }catch(e){} }
+    };
+    if(window.JASEC&&JASEC.guard&&!(JASEC.can&&JASEC.can('menu.delete'))) JASEC.guard('menu.delete',{title:'Bulk Menu Delete',detail:n+' items'},doDel);
+    else doDel();
+  },
+  csvOut:function(){
+    var head='name,category,price,cost,shortcode,nonveg,off\n';
+    var body=state.menu.map(function(m){
+      function q(s){ s=String(s==null?'':s); return (s.indexOf(',')>=0||s.indexOf('"')>=0)?('"'+s.replace(/"/g,'""')+'"'):s; }
+      return [q(m.name),q(m.cat||''),m.price||0,m.costPrice||0,q(m.sc||''),m.nonveg?1:0,m.off?1:0].join(',');
+    }).join('\n');
+    var blob=new Blob([head+body],{type:'text/csv;charset=utf-8'});
+    var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='jay-ambe-menu-'+new Date().toISOString().slice(0,10)+'.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    toastSafe('⬇️ Menu CSV download hua ('+state.menu.length+' items)');
+  },
+  csvIn:function(ev){
+    var f=ev.target.files&&ev.target.files[0]; if(!f) return;
+    var rd=new FileReader();
+    rd.onload=function(){
+      try{
+        var lines=String(rd.result).split(/\r?\n/).filter(function(l){ return l.trim(); });
+        if(!lines.length){ toastSafe('❌ Khali file','error'); return; }
+        var start=/name/i.test(lines[0])?1:0, added=0, updated=0;
+        function cells(line){
+          var out=[],cur='',inQ=false;
+          for(var i=0;i<line.length;i++){
+            var ch=line[i];
+            if(inQ){ if(ch==='"'){ if(line[i+1]==='"'){ cur+='"'; i++; } else inQ=false; } else cur+=ch; }
+            else if(ch==='"') inQ=true;
+            else if(ch===','){ out.push(cur); cur=''; }
+            else cur+=ch;
+          }
+          out.push(cur); return out;
+        }
+        for(var i=start;i<lines.length;i++){
+          var c=cells(lines[i]);
+          var name=(c[0]||'').trim(); if(!name) continue;
+          var price=parseFloat(c[2])||0;
+          var ex=state.menu.find(function(m){ return m.name.toLowerCase()===name.toLowerCase(); });
+          if(ex){ ex.cat=(c[1]||'').trim(); if(price>0) ex.price=price; ex.costPrice=parseFloat(c[3])||0; ex.sc=(c[4]||'').trim().toUpperCase(); ex.nonveg=String(c[5]).trim()==='1'; ex.off=String(c[6]).trim()==='1'; updated++; }
+          else{ state.menu.push({id:'m'+Date.now()+'_'+i,name:name,cat:(c[1]||'').trim(),price:price,costPrice:parseFloat(c[3])||0,sc:(c[4]||'').trim().toUpperCase(),nonveg:String(c[5]).trim()==='1',off:String(c[6]).trim()==='1',commType:'flat',commVal:0}); added++; }
+        }
+        commitMenu('⬆️ CSV import: '+added+' naye + '+updated+' update');
+        if(window.JASEC&&JASEC.log){ try{ JASEC.log('Menu CSV Import',{detail:added+' added, '+updated+' updated',skipReason:true}); }catch(e){} }
+      }catch(e){ toastSafe('❌ CSV padh nahi paya: '+e,'error'); }
+      ev.target.value='';
+    };
+    rd.readAsText(f);
+  },
+  _render:renderPro
+};
+
+/* ── hook renderMenuManage: humara pro table upar chadh jata hai ── */
+if(typeof window.renderMenuManage==='function'){
+  var _prevMM=window.renderMenuManage;
+  window.renderMenuManage=function(){
+    var r=_prevMM.apply(this,arguments);
+    try{ renderPro(); }catch(e){ try{ console.warn('v31 menupro err',e); }catch(e2){} }
+    return r;
+  };
+}
+/* menu push bhi jab form se add/edit ho */
+if(typeof window.saveMenuItem==='function'){
+  var _prevSMI=window.saveMenuItem;
+  window.saveMenuItem=function(){ var r=_prevSMI.apply(this,arguments); try{ pushMenu(); }catch(e){} return r; };
+}
+if(typeof window.delItem==='function'){
+  var _prevDI=window.delItem;
+  window.delItem=function(){ var r=_prevDI.apply(this,arguments); try{ pushMenu(); renderPro(); }catch(e){} return r; };
+}
+console.log('🍽️ [v31] Menu Manager Pro ready ('+state.menu.length+' items)');
+})();
+</script>
+
+<script id="v31-inventory-pro">
+/* ═══════════════════════════════════════════════════════════════════
+   JAY AMBE POS v31 — INVENTORY PRO (v29 lightweight stock ke upar)
+   - 🛒 Purchase entry: supplier + qty + kharcha ₹ → stock auto +, ledger me
+   - 📜 Stock History: har movement ka ledger (purchase/received/wastage/daily)
+   - 📊 Purchase Report: aaj/hafta/mahina — kitna kharcha, kis supplier se
+   - 📋 Daily stock count snapshot
+   Store: ja29_inventory (same) + ja31_inv_ledger (naya)
+   ═══════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+if(window.__v31InvPro) return; window.__v31InvPro=true;
+var url=new URLSearchParams(location.search);
+if(url.get('role')==='menu'||url.get('menu')==='1') return;
+function esc(s){ return (typeof escHtml==='function')?escHtml(s):String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function attr(s){ return String(s==null?'':s).replace(/"/g,'&quot;'); }
+function toastSafe(m,t){ try{ if(typeof toast==='function') return toast(m,t); }catch(e){} }
+var K_ITEMS='ja29_inventory', K_LEDGER='ja31_inv_ledger', K_SUP='ja31_inv_suppliers';
+function items(){ try{ return JSON.parse(localStorage.getItem(K_ITEMS))||[]; }catch(e){ return []; } }
+function saveItems(a){ try{ localStorage.setItem(K_ITEMS,JSON.stringify(a)); }catch(e){} }
+function ledger(){ try{ return JSON.parse(localStorage.getItem(K_LEDGER))||[]; }catch(e){ return []; } }
+function saveLedger(a){ if(a.length>2000) a=a.slice(-2000); try{ localStorage.setItem(K_LEDGER,JSON.stringify(a)); }catch(e){} }
+function suppliers(){ try{ return JSON.parse(localStorage.getItem(K_SUP))||[]; }catch(e){ return []; } }
+function remSupplier(s){ s=(s||'').trim(); if(!s) return; var a=suppliers().filter(function(x){ return x.toLowerCase()!==s.toLowerCase(); }); a.unshift(s); try{ localStorage.setItem(K_SUP,JSON.stringify(a.slice(0,25))); }catch(e){} }
+function who(){ try{ return (window.JASEC&&JASEC.currentUser&&JASEC.currentUser()&&JASEC.currentUser().name)||window.jaRole||'admin'; }catch(e){ return 'admin'; } }
+function logL(entry){ var a=ledger(); entry.ts=Date.now(); entry.by=who(); a.push(entry); saveLedger(a); }
+function fmtD(ts){ var d=new Date(ts); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+' '+d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}); }
+function rupee(n){ return '₹'+Math.round(n||0).toLocaleString('en-IN'); }
+
+/* ── v29 adjust ko ledger me capture (before/after diff) ── */
+(function(){
+  function wrapAdjust(){
+    if(!window.JAINV||!JAINV._adjust||JAINV.__v31wrapped) return false;
+    var _adj=JAINV._adjust;
+    JAINV._adjust=function(id,dir){
+      var before={}; items().forEach(function(x){ before[x.id]=x.currentStock; });
+      var r=_adj.apply(this,arguments);
+      try{
+        items().forEach(function(x){
+          if(before[x.id]!==undefined&&before[x.id]!==x.currentStock){
+            var d=x.currentStock-before[x.id];
+            logL({itemId:x.id,name:x.name,unit:x.unit,type:d>0?'received':'out',qty:Math.abs(d),cost:0,supplier:'',reason:d>0?'Received (quick)':'Kharch/Wastage',stockAfter:x.currentStock});
+          }
+        });
+        renderCards();
+      }catch(e){}
+      return r;
+    };
+    JAINV.__v31wrapped=true; return true;
+  }
+  if(!wrapAdjust()){ var tries=0; var t=setInterval(function(){ if(wrapAdjust()||++tries>20) clearInterval(t); },500); }
+})();
+
+/* ── UI cards inject into inventory page ── */
+function host(){ var pg=document.getElementById('pg-inventory'); if(!pg) return null; return pg.querySelector('.wrap')||pg; }
+function injectCards(){
+  var h=host(); if(!h||document.getElementById('v31inv-buy')) return;
+  var buy=document.createElement('div'); buy.className='card'; buy.id='v31inv-buy';
+  buy.innerHTML='<div class="card-h">🛒 Purchase Entry (maal aaya)</div><div id="v31inv-buy-body"></div>';
+  var rep=document.createElement('div'); rep.className='card'; rep.id='v31inv-rep';
+  rep.innerHTML='<div class="card-h">📊 Purchase Report <select id="v31inv-period" class="v31-inp" style="margin-left:10px;font-size:11.5px" onchange="JAINVP._render()"><option value="today">Aaj</option><option value="week" selected>7 din</option><option value="month">30 din</option></select></div><div id="v31inv-rep-body"></div>';
+  var his=document.createElement('div'); his.className='card'; his.id='v31inv-his';
+  his.innerHTML='<div class="card-h">📜 Stock History <button type="button" class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="JAINVP.daily()">📋 Aaj ka stock count save</button> <button type="button" class="btn btn-ghost btn-sm" onclick="JAINVP.csv()">⬇️ CSV</button></div><div id="v31inv-his-body"></div>';
+  h.appendChild(buy); h.appendChild(rep); h.appendChild(his);
+  renderCards();
+}
+function renderBuy(){
+  var b=document.getElementById('v31inv-buy-body'); if(!b) return;
+  var its=items();
+  b.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">'+
+    '<div><label style="font-size:10px;font-weight:800;color:var(--muted)">ITEM</label><br><select id="v31inv-item" class="v31-inp" style="min-width:160px" onchange="JAINVP._itemSel()">'+
+      '<option value="">— chuno —</option>'+
+      its.map(function(x){ return '<option value="'+attr(x.id)+'">'+esc(x.name)+' ('+esc(x.unit)+')</option>'; }).join('')+
+      '<option value="__new">➕ Naya item…</option></select></div>'+
+    '<div id="v31inv-newwrap" style="display:none"><label style="font-size:10px;font-weight:800;color:var(--muted)">NAYA ITEM + UNIT</label><br>'+
+      '<input id="v31inv-newname" class="v31-inp" placeholder="naam (jaise Paneer)" style="width:130px">'+
+      '<input id="v31inv-newunit" class="v31-inp" placeholder="kg/pkt/L" style="width:70px"></div>'+
+    '<div><label style="font-size:10px;font-weight:800;color:var(--muted)">QTY</label><br><input id="v31inv-qty" type="number" class="v31-inp" style="width:80px" placeholder="10"></div>'+
+    '<div><label style="font-size:10px;font-weight:800;color:var(--muted)">TOTAL KHARCHA ₹</label><br><input id="v31inv-cost" type="number" class="v31-inp" style="width:100px" placeholder="500"></div>'+
+    '<div><label style="font-size:10px;font-weight:800;color:var(--muted)">SUPPLIER</label><br><input id="v31inv-sup" class="v31-inp" list="v31inv-supdl" style="width:130px" placeholder="dukaan/vendor">'+
+      '<datalist id="v31inv-supdl">'+suppliers().map(function(s){ return '<option value="'+attr(s)+'">'; }).join('')+'</datalist></div>'+
+    '<button type="button" class="btn btn-brand btn-sm" onclick="JAINVP.buy()" style="height:34px">➕ Entry</button>'+
+    '</div>'+
+    '<div style="font-size:10.5px;color:var(--muted);margin-top:6px">💡 Stock apne-aap badh jayega, ledger me date/supplier/kharcha save rahega.</div>';
+}
+function period(){ var s=document.getElementById('v31inv-period'); var v=s?s.value:'week'; var d=new Date(); if(v==='today'){ d.setHours(0,0,0,0); } else if(v==='week'){ d.setDate(d.getDate()-7); } else { d.setDate(d.getDate()-30); } return d.getTime(); }
+function renderRep(){
+  var b=document.getElementById('v31inv-rep-body'); if(!b) return;
+  var from=period();
+  var buys=ledger().filter(function(l){ return l.type==='purchase'&&l.ts>=from; });
+  var total=buys.reduce(function(s,l){ return s+(l.cost||0); },0);
+  var bySup={}, byItem={};
+  buys.forEach(function(l){
+    var sp=l.supplier||'(bina naam)'; bySup[sp]=(bySup[sp]||0)+(l.cost||0);
+    byItem[l.name]=(byItem[l.name]||0)+(l.cost||0);
+  });
+  function top(o){ return Object.keys(o).sort(function(a,b){ return o[b]-o[a]; }).slice(0,6); }
+  b.innerHTML='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">'+
+    '<div class="v31-bchip"><span class="d" style="background:#c0392b"></span>Total kharcha · <b>'+rupee(total)+'</b></div>'+
+    '<div class="v31-bchip"><span class="d" style="background:#2456c4"></span>Entries · <b>'+buys.length+'</b></div></div>'+
+    (buys.length?('<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:12px">'+
+      '<div><b style="font-size:11px;color:var(--muted)">SUPPLIER-WISE</b>'+top(bySup).map(function(s){ return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--line)"><span>'+esc(s)+'</span><b>'+rupee(bySup[s])+'</b></div>'; }).join('')+'</div>'+
+      '<div><b style="font-size:11px;color:var(--muted)">ITEM-WISE</b>'+top(byItem).map(function(s){ return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed var(--line)"><span>'+esc(s)+'</span><b>'+rupee(byItem[s])+'</b></div>'; }).join('')+'</div>'+
+    '</div>'):'<div style="font-size:12px;color:var(--muted)">Is period me koi purchase entry nahi.</div>');
+}
+function renderHis(){
+  var b=document.getElementById('v31inv-his-body'); if(!b) return;
+  var L=ledger().slice(-120).reverse();
+  if(!L.length){ b.innerHTML='<div style="font-size:12px;color:var(--muted)">Abhi koi movement nahi — upar purchase entry karo ya stock +/− use karo.</div>'; return; }
+  var badge={purchase:'🛒 Purchase',received:'📥 Received',out:'📤 Kharch',daily:'📋 Count'};
+  var color={purchase:'background:#e8efff;color:#2456c4',received:'background:#e3f7ec;color:#0a7d46',out:'background:#fdeaea;color:#c0392b',daily:'background:#fff3e2;color:#b25e00'};
+  b.innerHTML='<div class="v31mp-scroll" style="max-height:340px"><table class="v31mp-tbl">'+
+    '<tr><th>KAB</th><th>ITEM</th><th>TYPE</th><th style="text-align:right">QTY</th><th style="text-align:right">₹</th><th>SUPPLIER/REASON</th><th style="text-align:right">BACHA</th><th>KISNE</th></tr>'+
+    L.map(function(l){
+      return '<tr><td style="white-space:nowrap">'+fmtD(l.ts)+'</td><td><b>'+esc(l.name)+'</b></td>'+
+        '<td><span class="v31pc-chip" style="'+(color[l.type]||'')+'">'+(badge[l.type]||l.type)+'</span></td>'+
+        '<td style="text-align:right;font-family:monospace;font-weight:800">'+(l.type==='out'?'−':(l.type==='daily'?'=':'+'))+l.qty+' '+esc(l.unit||'')+'</td>'+
+        '<td style="text-align:right;font-family:monospace">'+(l.cost?rupee(l.cost):'—')+'</td>'+
+        '<td style="font-size:11px;color:var(--muted)">'+esc(l.supplier||l.reason||'—')+'</td>'+
+        '<td style="text-align:right;font-family:monospace">'+(l.stockAfter!=null?l.stockAfter:'—')+'</td>'+
+        '<td style="font-size:11px">'+esc(l.by||'')+'</td></tr>';
+    }).join('')+'</table></div>';
+}
+function renderCards(){ renderBuy(); renderRep(); renderHis(); }
+
+window.JAINVP={
+  _itemSel:function(){ var s=document.getElementById('v31inv-item'); var w=document.getElementById('v31inv-newwrap'); if(w) w.style.display=(s&&s.value==='__new')?'':'none'; },
+  buy:function(){
+    var sid=(document.getElementById('v31inv-item')||{}).value;
+    var qty=parseFloat((document.getElementById('v31inv-qty')||{}).value);
+    var cost=parseFloat((document.getElementById('v31inv-cost')||{}).value)||0;
+    var sup=((document.getElementById('v31inv-sup')||{}).value||'').trim();
+    if(!sid){ toastSafe('⚠️ Item chuno','warn'); return; }
+    if(isNaN(qty)||qty<=0){ toastSafe('⚠️ Sahi qty daalo','warn'); return; }
+    var a=items(), it;
+    if(sid==='__new'){
+      var nm=((document.getElementById('v31inv-newname')||{}).value||'').trim();
+      var un=((document.getElementById('v31inv-newunit')||{}).value||'').trim()||'unit';
+      if(!nm){ toastSafe('⚠️ Naye item ka naam daalo','warn'); return; }
+      it={id:'inv'+Date.now().toString(36),name:nm,unit:un,currentStock:0,lowStockThreshold:0};
+      a.push(it);
+    } else { it=a.find(function(x){ return x.id===sid; }); if(!it){ toastSafe('❌ Item nahi mila','error'); return; } }
+    it.currentStock=Math.max(0,(it.currentStock||0)+qty);
+    saveItems(a); remSupplier(sup);
+    logL({itemId:it.id,name:it.name,unit:it.unit,type:'purchase',qty:qty,cost:cost,supplier:sup,reason:'',stockAfter:it.currentStock});
+    if(window.JASEC&&JASEC.log){ try{ JASEC.log('Stock Purchase Entry',{detail:it.name+' +'+qty+' '+it.unit+(cost?(' · '+rupee(cost)):'')+(sup?(' · '+sup):''),skipReason:true}); }catch(e){} }
+    toastSafe('🛒 '+it.name+' +'+qty+' '+it.unit+' (ab '+it.currentStock+')');
+    ['v31inv-qty','v31inv-cost','v31inv-newname','v31inv-newunit'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+    renderCards();
+    try{ if(window.JAINV&&JAINV._render) JAINV._render(); }catch(e){}
+  },
+  daily:function(){
+    var a=items(); if(!a.length){ toastSafe('⚠️ Koi stock item nahi','warn'); return; }
+    a.forEach(function(x){ logL({itemId:x.id,name:x.name,unit:x.unit,type:'daily',qty:x.currentStock,cost:0,supplier:'',reason:'Daily count',stockAfter:x.currentStock}); });
+    toastSafe('📋 '+a.length+' items ka aaj ka stock ledger me save');
+    renderCards();
+  },
+  csv:function(){
+    var L=ledger();
+    var head='date,time,item,type,qty,unit,cost,supplier_reason,stock_after,by\n';
+    var body=L.map(function(l){
+      var d=new Date(l.ts);
+      function q(s){ s=String(s==null?'':s); return (s.indexOf(',')>=0)?('"'+s.replace(/"/g,'""')+'"'):s; }
+      return [d.toLocaleDateString('en-IN'),d.toLocaleTimeString('en-IN'),q(l.name),l.type,l.qty,q(l.unit||''),l.cost||0,q(l.supplier||l.reason||''),l.stockAfter!=null?l.stockAfter:'',q(l.by||'')].join(',');
+    }).join('\n');
+    var blob=new Blob([head+body],{type:'text/csv;charset=utf-8'});
+    var el=document.createElement('a'); el.href=URL.createObjectURL(blob);
+    el.download='jay-ambe-stock-ledger-'+new Date().toISOString().slice(0,10)+'.csv';
+    document.body.appendChild(el); el.click(); el.remove();
+    toastSafe('⬇️ Ledger CSV ('+L.length+' entries)');
+  },
+  _render:renderCards
+};
+
+if(typeof window.onShow==='function'){
+  var _show=window.onShow;
+  window.onShow=function(pg){
+    var r=_show.apply(this,arguments);
+    if(pg==='inventory') setTimeout(function(){ injectCards(); renderCards(); },260);
+    return r;
+  };
+}
+setTimeout(injectCards,2400);
+console.log('📦 [v31] Inventory Pro ready (ledger: '+ledger().length+' entries)');
+})();
+</script>
+
+<script id="v31-print-pro">
+/* ═══════════════════════════════════════════════════════════════════
+   JAY AMBE POS v31 — PRINT PRO (sabse bahar wali print layer)
+   - Har printer ki apni width (58mm=32 / 80mm=42/48 chars) — Printer
+     Center se; text usi hisaab se banta hai (naam wrap, columns align)
+   - Bill: ITEM/QTY/RATE/AMT columns, GST/FSSAI header, biller naam,
+     reprint par saaf "DUPLICATE BILL" marker (Petpooja jaisa)
+   - KOT: bada readable format, notes, biller/waiter
+   - Rules v29 Pro Routing ke hi chalte hain (v29pr._route) — ye layer
+     sirf TEXT QUALITY + width handle karti hai. Fail → purana path.
+   ═══════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+if(window.__v31PrintPro) return; window.__v31PrintPro=true;
+var url=new URLSearchParams(location.search);
+if(url.get('role')==='menu'||url.get('menu')==='1') return;
+var origin=(/^https?:$/.test(location.protocol))?location.origin:'';
+function toastSafe(m,t){ try{ if(typeof toast==='function') return toast(m,t); }catch(e){} }
+function bset(){ try{ return JSON.parse(localStorage.getItem('ja3_bset')||'{}'); }catch(e){ return {}; } }
+function proCfg(){ var c; try{ c=JSON.parse(localStorage.getItem('ja29_printcfg'))||{}; }catch(e){ c={}; } c.names=c.names||{}; c.rules=c.rules||[]; c.def=c.def||''; return c; }
+function mapCfg(){ var m; try{ m=JSON.parse(localStorage.getItem('ja_v28_printmap'))||{}; }catch(e){ m={}; } m.stations=m.stations||{}; m.tables=m.tables||{}; return m; }
+function pw(p){ try{ return (window.v31PrinterWidth&&v31PrinterWidth(p))||32; }catch(e){ return 32; } }
+function pcopies(p){ try{ return (window.v31PrinterCopies&&v31PrinterCopies(p))||0; }catch(e){ return 0; } }
+function friendly(p){ return proCfg().names[p]||p; }
+
+/* ── width-aware text toolkit ── */
+function ln(w,ch){ return new Array(w+1).join(ch||'-'); }
+function ctr(w,s){ s=String(s); if(s.length>=w) return s.slice(0,w); var p=Math.floor((w-s.length)/2); return new Array(p+1).join(' ')+s; }
+function lr(w,l,r){ l=String(l); r=String(r); if(l.length+r.length>=w) l=l.slice(0,Math.max(1,w-r.length-1)); return l+new Array(Math.max(1,w-l.length-r.length)+1).join(' ')+r; }
+function wrap(w,s,indent){
+  s=String(s||''); indent=indent||0; var pad=new Array(indent+1).join(' ');
+  var words=s.split(/\s+/), out=[], cur='';
+  words.forEach(function(word){
+    var tryS=cur?(cur+' '+word):word;
+    if((indent+tryS.length)<=w){ cur=tryS; }
+    else{
+      if(cur) out.push(pad+cur);
+      while(word.length>w-indent){ out.push(pad+word.slice(0,w-indent)); word=word.slice(w-indent); }
+      cur=word;
+    }
+  });
+  if(cur) out.push(pad+cur);
+  return out.length?out:[pad];
+}
+function num(n){ return String(Math.round(n||0)); }
+
+/* ── KOT text (bada, readable) ── */
+function buildKot(order,label,items,w){
+  var t=[];
+  t.push(ln(w,'='));
+  t.push(ctr(w,'*** KITCHEN ORDER ***'));
+  if(label) t.push(ctr(w,String(label).toUpperCase()));
+  t.push(ln(w,'='));
+  t.push(lr(w,'TABLE: '+(order.train||order.table||'-'),'#'+(order.id||'')));
+  t.push(lr(w,'Time: '+(order.time||new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})),(order.orderType==='parcel'?'PARCEL':'')));
+  if(order.waiter) t.push('Waiter: '+order.waiter);
+  if(order.billerName) t.push('Biller: '+order.billerName);
+  t.push(ln(w,'-'));
+  var qty=0;
+  (items||[]).forEach(function(i){
+    qty+=(i.qty||1);
+    var head=' '+(i.qty||1)+' x ';
+    var nameLines=wrap(w,i.name||'',head.length);
+    nameLines[0]=head+nameLines[0].slice(head.length);
+    t=t.concat(nameLines);
+    if(i.note) t=t.concat(wrap(w,'>> '+i.note,head.length));
+    if(i.from) t=t.concat(wrap(w,'[from '+i.from+']',head.length));
+  });
+  t.push(ln(w,'-'));
+  t.push(lr(w,'Items: '+(items||[]).length,'Total Qty: '+qty));
+  t.push(ln(w,'='));
+  t.push('');
+  return t.join('\n');
+}
+
+/* ── BILL text (Petpooja-level columns) ── */
+function buildBill(order,w,duplicate){
+  var b=bset();
+  var name=(b.name||'JAY AMBE FAST FOOD & RESTAURANT').toUpperCase();
+  var t=[];
+  t.push(ln(w,'='));
+  wrap(w,name).forEach(function(l){ t.push(ctr(w,l.trim())); });
+  wrap(w,b.addr||'Sliver Complex, Nr. Shilpa Garage, AMD Highway, Mehsana').forEach(function(l){ t.push(ctr(w,l.trim())); });
+  var ph=(b.ph1||'9726401507')+(b.ph2?('/'+b.ph2):'');
+  t.push(ctr(w,'Ph: '+ph));
+  if(b.fssai!==''){ t.push(ctr(w,'FSSAI: '+(b.fssai||'10719014000369'))); }
+  if(b.gst!==''){ t.push(ctr(w,'GST: '+(b.gst||'24ARPPG0707J1ZW'))); }
+  t.push(ln(w,'='));
+  if(duplicate){ t.push(ctr(w,'*** DUPLICATE BILL ***')); t.push(ln(w,'-')); }
+  var dparts=String(order.date||'').split('-');
+  var dc=dparts.length===3?(dparts[2]+'/'+dparts[1]+'/'+dparts[0]):(order.date||'');
+  t.push(lr(w,'Bill: '+(order.id||''),dc));
+  t.push(lr(w,'Table: '+(order.train||'-')+(order.trainName?(' ('+order.trainName+')'):''),order.time||''));
+  var meta=[];
+  if(order.coach) meta.push('Waiter: '+order.coach);
+  if(order.pnr) meta.push('Guests: '+order.pnr);
+  if(meta.length) t.push(meta.join('  '));
+  if(order.billerName) t.push('Biller: '+order.billerName);
+  if(order.name) t.push('Customer: '+order.name+(order.mobile?(' ('+order.mobile+')'):''));
+  t.push(ln(w,'-'));
+  /* columns: naam(nw) | QTY(3) | RATE(rw right) | AMT(aw right) */
+  var aw=7, rw=6, qw=4, nw=w-aw-rw-qw;
+  function sp(n){ return new Array(Math.max(0,n)+1).join(' '); }
+  t.push('ITEM'+sp(nw-4)+'QTY'+sp(rw-4)+'RATE'+sp(aw-3)+'AMT');
+  t.push(ln(w,'-'));
+  var totQty=0;
+  (order.items||[]).forEach(function(i){
+    totQty+=(i.qty||0);
+    var nameLines=wrap(nw-1,i.name||'',0);
+    var qtyS=String(i.qty||0), rateS=num(i.price), amtS=num((i.price||0)*(i.qty||0));
+    var firstRight=qtyS+sp(3-qtyS.length)+sp(rw-rateS.length)+rateS+sp(aw-amtS.length)+amtS;
+    var first=(nameLines[0]||'').slice(0,nw-1);
+    t.push(first+sp(nw-first.length)+firstRight);
+    nameLines.slice(1).forEach(function(l2){ t.push(' '+l2); });
+  });
+  t.push(ln(w,'-'));
+  t.push(lr(w,'Total Qty: '+totQty,'Sub: '+num(order.total)));
+  if(order.discount) t.push(lr(w,'Discount','-'+num(order.discount)));
+  t.push(ln(w,'='));
+  var net=(order.netTotal!=null?order.netTotal:order.total);
+  t.push(lr(w,'GRAND TOTAL','Rs.'+num(net)));
+  t.push(ln(w,'='));
+  t.push(ctr(w,(order.pay||'Cash').toUpperCase()+' | '+(order.status||'').toUpperCase()));
+  t.push(ln(w,'-'));
+  wrap(w,b.footer||'CONTACT US FOR FRANCHISE').forEach(function(l){ t.push(ctr(w,l.trim())); });
+  wrap(w,b.thanks||'Thank you! Jay Ambe Parivar').forEach(function(l){ t.push(ctr(w,l.trim())); });
+  t.push(ctr(w,'Printed: '+new Date().toLocaleString('en-IN')));
+  t.push('');
+  return t.join('\n');
+}
+window.v31BuildBillText=buildBill; window.v31BuildKotText=buildKot;
+
+/* ── routing (v29pr engine reuse, warna station map) ── */
+function ticket(id){
+  try{
+    if(typeof v22State!=='undefined'&&v22State&&v22State.kotOrders){
+      var k=v22State.kotOrders.find(function(t){ return t.id===id; }); if(k) return k;
+    }
+    if(typeof state!=='undefined'&&state.kotTickets) return state.kotTickets.find(function(t){ return t.id===id; });
+  }catch(e){}
+  return null;
+}
+function orderOf(k){ try{ return state.orders.find(function(o){ return o.id===(k.orderId||''); })||null; }catch(e){ return null; } }
+function kotGroups(order,items){
+  try{
+    if(window.v29pr&&v29pr._proOn&&v29pr._proOn()&&v29pr._route){
+      var g=v29pr._route(order,items).kot, out={};
+      Object.keys(g).forEach(function(p){ if(p&&p!=='(no printer)') out[p]=g[p]; });
+      if(Object.keys(out).length) return out;
+    }
+  }catch(e){}
+  var m=mapCfg();
+  if(m.enabled===false) return null;
+  var out2={}, any=false;
+  (items||[]).forEach(function(i){
+    var p=(order.train!=null&&m.tables[String(order.train)])||m.stations[i.station||'kitchen']||m.stations.counter||m.bill||'';
+    if(!p) return;
+    (out2[p]=out2[p]||[]).push(i); any=true;
+  });
+  return any?out2:null;
+}
+function billPrinter(order){
+  try{
+    if(window.v29pr&&v29pr._proOn&&v29pr._proOn()&&v29pr._route){
+      var bp=v29pr._route(order,order.items||[]).bill;
+      if(bp&&bp!=='(no printer)') return bp;
+    }
+  }catch(e){}
+  var m=mapCfg();
+  return (order.train!=null&&m.tables&&m.tables[String(order.train)])||m.bill||'';
+}
+function send(p,content,copies){
+  return fetch(origin+'/api/print',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({printer:p,content:content,copies:copies||1})})
+    .then(function(r){ return r.json(); });
+}
+
+/* ── reprint counter (DUPLICATE marker) ── */
+var PK='ja31_printcounts';
+function printedBefore(id){
+  var m; try{ m=JSON.parse(localStorage.getItem(PK))||{}; }catch(e){ m={}; }
+  var was=!!m[id];
+  m[id]=(m[id]||0)+1;
+  var keys=Object.keys(m);
+  if(keys.length>600){ keys.slice(0,keys.length-500).forEach(function(k2){ delete m[k2]; }); }
+  try{ localStorage.setItem(PK,JSON.stringify(m)); }catch(e){}
+  return was;
+}
+
+/* ── outermost wrappers ── */
+if(typeof window.printKOT==='function'){
+  var _pk=window.printKOT;
+  window.printKOT=function(id){
+    try{
+      if(origin){
+        var k=ticket(id);
+        if(k&&(k.items||[]).length){
+          var po=orderOf(k);
+          var order={ id:k.orderId||k.id, train:k.table||k.train||k.trainNo, time:k.time||new Date(k.ts||Date.now()).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),
+            orderType:k.orderType, waiter:(po&&po.coach)||k.coach||'', billerName:(po&&po.billerName)||'' };
+          var groups=kotGroups(order,k.items);
+          if(groups){
+            var ps=Object.keys(groups);
+            ps.forEach(function(p){
+              send(p,buildKot(order,friendly(p),groups[p],pw(p)),1)
+                .then(function(j){ if(j&&j.ok) toastSafe('🖨️ KOT → '+friendly(p)+' (T'+(order.train||'-')+')'); else toastSafe('❌ KOT fail: '+((j&&j.error)||'?'),'error'); })
+                .catch(function(){ toastSafe('❌ KOT print fail ('+friendly(p)+')','error'); });
+            });
+            try{ if(window.JASEC) JASEC.log('KOT Printed',{detail:'#'+order.id+' → '+ps.map(friendly).join(', ')+' (v31 pro)',skipReason:true}); }catch(e){}
+            return;
+          }
+        }
+      }
+    }catch(e){ try{ console.warn('v31 printKOT err',e); }catch(e2){} }
+    return _pk.apply(this,arguments);
+  };
+}
+if(typeof window.printBill==='function'){
+  var _pb=window.printBill;
+  window.printBill=function(order){
+    try{
+      if(origin&&order&&order.id){
+        var p=billPrinter(order);
+        if(p){
+          var dup=printedBefore(order.id);
+          var copies=pcopies(p)||mapCfg().billCopies||1;
+          send(p,buildBill(order,pw(p),dup),copies)
+            .then(function(j){ if(j&&j.ok) toastSafe('🧾 Bill → '+friendly(p)+(dup?' (DUPLICATE)':'')); else toastSafe('❌ Bill fail: '+((j&&j.error)||'?'),'error'); })
+            .catch(function(){ toastSafe('❌ Bill print fail ('+friendly(p)+')','error'); });
+          try{ if(window.JASEC) JASEC.log('Bill Printed',{detail:'#'+order.id+' → '+friendly(p)+(dup?' DUPLICATE':'')+' (v31 pro)',skipReason:true}); }catch(e){}
+          return;
+        }
+      }
+    }catch(e){ try{ console.warn('v31 printBill err',e); }catch(e2){} }
+    return _pb.apply(this,arguments);
+  };
+}
+console.log('🖨️ [v31] Print Pro ready (width-aware, DUPLICATE marker)');
+})();
+</script>
+
+<style id="v31-polish">
+/* ═══ v31 PREMIUM POLISH — depth, boot readiness, commercial feel ═══ */
+.card{box-shadow:0 1px 3px rgba(16,24,40,.05),0 6px 18px rgba(16,24,40,.05);transition:box-shadow .18s ease}
+.btn{transition:transform .12s ease,box-shadow .15s ease,background .15s ease}
+.btn:active{transform:scale(.965)}
+.btn-brand{box-shadow:0 4px 14px rgba(10,158,92,.28)}
+.btn-brand:hover{box-shadow:0 6px 20px rgba(10,158,92,.38);transform:translateY(-1px)}
+.nav button.active{box-shadow:0 4px 14px rgba(0,0,0,.16)}
+.table-card{transition:transform .14s ease,box-shadow .16s ease}
+.table-card:hover{transform:translateY(-2px)}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:rgba(120,130,140,.35);border-radius:99px;border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:rgba(120,130,140,.55);background-clip:content-box}
+::-webkit-scrollbar-track{background:transparent}
+.v31-ready{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:14px;font-size:11px;font-weight:700;letter-spacing:.3px}
+.v31-ready span{display:inline-flex;align-items:center;gap:5px;color:rgba(255,255,255,.45);transition:color .3s}
+.v31-ready span.ok{color:#5cf2ae}
+.v31-ready span.bad{color:#ff9b91}
+.v31-ready i{font-style:normal;font-size:12px}
+</style>
+<script id="v31-boot-polish">
+/* ═══ v31 BOOT READINESS — professional loading ticks on boot screen ═══ */
+(function(){
+'use strict';
+if(window.__v31Boot) return; window.__v31Boot=true;
+var url=new URLSearchParams(location.search);
+if(url.get('role')==='menu'||url.get('menu')==='1') return;
+var origin=(/^https?:$/.test(location.protocol))?location.origin:'';
+function put(){
+  var wrap=document.querySelector('.boot-enter-wrap'); if(!wrap||document.getElementById('v31-ready')) return;
+  var d=document.createElement('div'); d.id='v31-ready'; d.className='v31-ready';
+  d.innerHTML='<span id="v31r-data"><i>⏳</i> Data</span>'+
+    '<span id="v31r-srv"><i>⏳</i> Server</span>'+
+    '<span id="v31r-prn"><i>⏳</i> Printers</span>'+
+    '<span id="v31r-bil"><i>⏳</i> Biller</span>';
+  wrap.appendChild(d);
+  check();
+}
+function mark(id,ok,label){
+  var el=document.getElementById(id); if(!el) return;
+  el.className=ok?'ok':'bad';
+  el.innerHTML='<i>'+(ok?'✅':'⚠️')+'</i> '+label;
+}
+function check(){
+  try{
+    var n=(typeof state!=='undefined'&&state.orders)?state.orders.length:0;
+    var m=(typeof state!=='undefined'&&state.menu)?state.menu.length:0;
+    mark('v31r-data',m>0,'Data ('+m+' items, '+n+' bills)');
+  }catch(e){ mark('v31r-data',false,'Data'); }
+  try{
+    var b=(window.v31MyBiller&&v31MyBiller());
+    var raw=''; try{ raw=localStorage.getItem('ja_v31_mybiller')||''; }catch(e2){}
+    mark('v31r-bil',!!(b||raw==='skip'),b?('Biller: '+b.name):(raw==='skip'?'Single counter':'Biller chunna baaki'));
+  }catch(e){ mark('v31r-bil',false,'Biller'); }
+  if(!origin){ mark('v31r-srv',false,'Server (file mode)'); mark('v31r-prn',false,'Printers'); return; }
+  fetch(origin+'/api/ping',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }).then(function(j){
+    mark('v31r-srv',!!(j&&j.ok),'Server v'+((j&&j.ver)||'?'));
+    return fetch(origin+'/api/printers',{cache:'no-store'}).then(function(r2){ return r2.ok?r2.json():null; });
+  }).then(function(j2){
+    var c=(j2&&j2.printers&&j2.printers.length)||0;
+    mark('v31r-prn',c>0,'Printers ('+c+')');
+  }).catch(function(){ mark('v31r-srv',false,'Server band'); mark('v31r-prn',false,'Printers'); });
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){ setTimeout(put,300); });
+else setTimeout(put,300);
+setTimeout(put,1500);   /* chooser rebuild ke baad bhi */
 })();
 </script>
 </body>
