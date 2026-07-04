@@ -2104,7 +2104,7 @@ function placeOrder(doPrint){
       toast('✏️ '+order.id+' updated'); }
   } else {
     state.counter++; var now=new Date();
-    order={id:'ORD'+(window._v28DevTag||'')+String(state.counter).padStart(4,'0'),num:state.counter,
+    order={id:(window.v31BillId?window.v31BillId():'ORD'+(window._v28DevTag||'')+String(state.counter).padStart(4,'0')),num:state.counter,
       date:today(),time:now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}),ts:Date.now(),
       cancelReason:'',history:[]};
     for(var k2 in det) order[k2]=det[k2];
@@ -2142,7 +2142,7 @@ function resetBilling(){
   else if(state.activeTrain){ setV('o-train',state.activeTrain); setV('o-trainName',state.activeTrainName||''); }
 }
 function cancelOrderEdit(){resetBilling();toast('Naya order mode');}
-function updateNext(){document.getElementById('next-ord').textContent='Next: ORD'+String(state.counter+1).padStart(4,'0');}
+function updateNext(){var nid=(window.v31NextBillId?window.v31NextBillId():null)||('ORD'+String(state.counter+1).padStart(4,'0'));document.getElementById('next-ord').textContent='Next: '+nid;}
 
 function loadIntoCart(o,isEdit){
   state.cart=o.items.map(function(i){
@@ -2196,6 +2196,7 @@ function printBill(order){
   var infoRows=[['Bill No',order.id],['Date',dcompact+' '+order.time],
     ['Table',order.train+(order.trainName?' ('+order.trainName+')':'')],
     ['Guests',order.pnr||'-'],['Waiter',(order.coach||'-')]];
+  if(order.billerName) infoRows.push(['Biller',order.billerName]);
   if(order.name) infoRows.push(['Name',order.name]);
   if(order.mobile) infoRows.push(['Mobile',order.mobile]);
   if(order.note) infoRows.push(['Note',order.note]);
@@ -2271,6 +2272,7 @@ function buildBillBody(order,_unused){
   var infoRows=[['Bill No',order.id],['Date',dcompact+' '+order.time],
     ['Table',order.train+(order.trainName?' ('+order.trainName+')':'')],
     ['Guests',order.pnr||'-'],['Waiter',(order.coach||'-')]];
+  if(order.billerName) infoRows.push(['Biller',order.billerName]);
   if(order.name) infoRows.push(['Name',order.name]);
   if(order.mobile) infoRows.push(['Mobile',order.mobile]);
   if(order.note) infoRows.push(['Note',order.note]);
@@ -2383,7 +2385,7 @@ function renderOrders(){
     return '<div class="ocard '+cls+'"><div class="ohead"><div style="display:flex;gap:8px;align-items:flex-start">'+
       '<input type="checkbox" class="ord-check" value="'+o.id+'" onchange="updateBatchBar()" style="width:auto;margin-top:3px">'+
       '<div>'+
-      '<span class="oid">'+o.id+'</span> <span class="badge '+bd+'">'+o.status+'</span> <span class="badge b-pay">'+o.pay+'</span>'+
+      '<span class="oid">'+o.id+'</span> <span class="badge '+bd+'">'+o.status+'</span> <span class="badge b-pay">'+o.pay+'</span>'+(o.billerName?' <span class="badge" style="background:#e8efff;color:#2456c4" title="Biller">💼 '+escHtml(o.billerName)+'</span>':'')+
       '<div class="ometa">🪑 '+escHtml(o.train||'-')+(o.trainName?' ('+escHtml(o.trainName)+')':'')+' · Guests '+escHtml(o.pnr||'-')+' · Waiter: '+escHtml(o.coach||'-')+'</div>'+
       (o.name?'<div class="ometa">👤 '+escHtml(o.name)+(o.mobile?' · '+escHtml(o.mobile):'')+'</div>':'')+
       (o.history&&o.history.length?'<div class="ometa">✏️ edited '+o.history.length+'x</div>':'')+
@@ -10490,7 +10492,7 @@ window.v27_acceptMobile=function(id){
   });
   var total=items.reduce(function(s,i){return s+i.price*i.qty;},0);
   state.counter++; var now=new Date();
-  var order={ id:'ORD'+(window._v28DevTag||'')+String(state.counter).padStart(4,'0'), num:state.counter, date:(typeof today==='function'?today():''),
+  var order={ id:(window.v31BillId?window.v31BillId():'ORD'+(window._v28DevTag||'')+String(state.counter).padStart(4,'0')), num:state.counter, date:(typeof today==='function'?today():''),
     time:now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}), ts:Date.now(), cancelReason:'', history:['📱 From mobile by '+(mo.staffName||'Mobile')],
     train:mo.tableNo, trainName:'', pnr:'', coach:'', seat:'', name:(mo.custName||mo.staffName||''), mobile:(mo.custPhone||''),
     note:'📱 Mobile order'+(mo.payMethod?(' · '+mo.payMethod):'')+(mo.orderType==='parcel'?' · Parcel':''),
@@ -16561,6 +16563,571 @@ if(typeof window.onShow==='function'){
 }
 setTimeout(function(){ injectPage(); refreshBanner(); },1600);
 console.log('📦 [v29] Inventory/stock alerts ready — items: '+items().length+' · auto-decrement: SKIPPED (see note)');
+})();
+</script>
+
+<style id="v31-style">
+/* ═══ v31 BILLER HUB — 2-biller system (Petpooja-style, do counter ek hisab) ═══ */
+#v31-badge{display:none;align-items:center;gap:6px;margin-top:5px;padding:3px 11px;border-radius:999px;background:rgba(255,255,255,.16);font-size:11px;font-weight:800;cursor:pointer;width:max-content;letter-spacing:.3px;transition:.15s}
+#v31-badge:hover{background:rgba(255,255,255,.28)}
+.v31b-dot{width:8px;height:8px;border-radius:50%;display:inline-block;box-shadow:0 0 6px rgba(255,255,255,.4)}
+.v31b-sync{font-size:9px;margin-left:2px}
+#v31-picker{position:fixed;inset:0;z-index:100000;background:rgba(8,12,18,.74);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);display:flex;align-items:center;justify-content:center;animation:v31fade .28s ease}
+.v31p-box{background:var(--card,#fff);color:var(--ink,#16202a);border-radius:24px;padding:32px 30px 26px;max-width:580px;width:92vw;box-shadow:0 34px 90px rgba(0,0,0,.5);text-align:center;animation:v31pop .32s cubic-bezier(.16,1,.3,1)}
+.v31p-ttl{font-family:'Sora',sans-serif;font-size:21px;font-weight:800;letter-spacing:-.3px}
+.v31p-sub{font-size:12.5px;color:var(--muted,#7a8691);margin:7px 0 20px;line-height:1.5}
+.v31p-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.v31p-card{border:2px solid var(--line,#e3e8ee);border-radius:18px;padding:20px 14px 16px;background:var(--card,#fff);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:7px;transition:.18s;position:relative;font-family:inherit}
+.v31p-card:hover{transform:translateY(-4px);border-color:var(--bc);box-shadow:0 14px 34px rgba(0,0,0,.14)}
+.v31p-card.on{border-color:var(--bc);box-shadow:0 0 0 3px var(--bc) inset}
+.v31p-dot{width:18px;height:18px;border-radius:50%;background:var(--bc);box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.v31p-nm{font-weight:800;font-size:16.5px;font-family:'Sora',sans-serif}
+.v31p-pre{font-size:11px;color:var(--muted,#7a8691);font-family:monospace}
+.v31p-tb{font-size:10.5px;color:var(--muted,#98a2ac)}
+.v31p-skip{margin-top:18px;background:none;border:none;color:var(--muted,#8a949e);font-size:12px;cursor:pointer;text-decoration:underline;font-family:inherit}
+@keyframes v31fade{from{opacity:0}to{opacity:1}}
+@keyframes v31pop{from{opacity:0;transform:scale(.92) translateY(14px)}to{opacity:1;transform:none}}
+.table-card .v31-towner{position:absolute;top:6px;right:6px;font-size:8.5px;font-weight:800;color:#fff;padding:2px 7px;border-radius:999px;opacity:.94;letter-spacing:.3px;z-index:2;pointer-events:none}
+.table-card.v31-not-mine{opacity:.8}
+.v31-bchip{display:inline-flex;align-items:center;gap:9px;padding:11px 15px;border:1.5px solid var(--line,#e3e8ee);border-radius:14px;font-size:13px;font-weight:700;background:var(--card,#fff)}
+.v31-bchip .d{width:11px;height:11px;border-radius:50%}
+.v31-inp{padding:8px 10px;border:1.5px solid var(--line,#dfe5eb);border-radius:9px;font-size:12.5px;font-family:inherit;background:var(--card,#fff);color:inherit}
+.v31-inp:focus{outline:none;border-color:var(--brand,#0a9e5c)}
+</style>
+<script id="v31-biller-hub">
+/* ═══════════════════════════════════════════════════════════════════
+   JAY AMBE POS v31 — BILLER HUB (Petpooja-style 2-Biller System)
+   - Biller profiles (Counter / Outdoor / unlimited) in SHARED config
+   - Har PC apna biller chunta hai → bill series alag (C0001 / O0001)
+   - Order book LAN-server par sync → dono billers ka hisab EK jagah
+   - Table ownership per biller (mobile auto-print isi se decide hota)
+   Additive layer: wraps globals, kabhi replace nahi karta.
+   ═══════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+var url=new URLSearchParams(location.search);
+if(url.get('role')==='menu'||url.get('menu')==='1') return;   /* customer menu: not needed */
+
+var origin=(/^https?:$/.test(location.protocol))?location.origin:'';
+var myDev=(function(){ try{ return localStorage.getItem('ja_v28_devid')||''; }catch(e){ return ''; } })();
+function esc(s){ return (typeof escHtml==='function')?escHtml(s):String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function toastSafe(m,t){ try{ if(typeof toast==='function') return toast(m,t); }catch(e){} try{ console.log(m); }catch(e2){} }
+
+/* ── shared biller config (LAN /api/config key: v31billers) ── */
+var CFG_LS='ja_v31_cfg', MY_LS='ja_v31_mybiller';
+function defCfg(){ return { billers:[
+  {id:'b1',name:'Counter',prefix:'C',color:'#0a9e5c',tables:'',primary:true},
+  {id:'b2',name:'Outdoor',prefix:'O',color:'#f07c10',tables:''}
+], autoAccept:false, updatedAt:0 }; }
+function cfg(){ try{ var c=JSON.parse(localStorage.getItem(CFG_LS)); if(c&&Array.isArray(c.billers)&&c.billers.length) return c; }catch(e){} return defCfg(); }
+function saveCfgLocal(c){ try{ localStorage.setItem(CFG_LS,JSON.stringify(c)); }catch(e){} }
+function pushCfg(c){ if(!origin) return; fetch(origin+'/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({config:{v31billers:c}})}).catch(function(){}); }
+function applyRemoteCfg(c){
+  if(!c||!Array.isArray(c.billers)||!c.billers.length) return;
+  var cur=cfg();
+  if((c.updatedAt||0)>(cur.updatedAt||0)){ saveCfgLocal(c); work=null; renderBadge(); renderCard(); }
+  else if((cur.updatedAt||0)>(c.updatedAt||0)){ pushCfg(cur); }   /* local newer (offline edit) → publish */
+}
+function billers(){ return cfg().billers||[]; }
+function myBillerRaw(){ try{ return localStorage.getItem(MY_LS)||''; }catch(e){ return ''; } }
+function myBiller(){ var id=myBillerRaw(); if(!id||id==='skip') return null; return billers().find(function(b){ return b.id===id; })||null; }
+window.v31Cfg=cfg; window.v31MyBiller=myBiller;
+
+/* ── bill id series per biller (CA0001 = Counter series, is PC ka tag A) ── */
+function pad4(n){ return String(n).padStart(4,'0'); }
+window.v31BillId=function(){
+  var c=0; try{ c=state.counter; }catch(e){}
+  var b=myBiller();
+  if(!b) return 'ORD'+(window._v28DevTag||'')+pad4(c);
+  return (b.prefix||'B')+(window._v28DevTag||'')+pad4(c);
+};
+window.v31NextBillId=function(){
+  var c=1; try{ c=state.counter+1; }catch(e){}
+  var b=myBiller(); if(!b) return null;
+  return (b.prefix||'B')+(window._v28DevTag||'')+pad4(c);
+};
+
+/* ── table ownership (tokens: "1-11" range · "21B,p36" exact) ── */
+function tok1(token,t){
+  token=String(token).trim(); if(!token) return false;
+  t=String(t==null?'':t).trim();
+  var m=token.match(/^(\d+)\s*-\s*(\d+)$/);
+  if(m){ var n=parseInt(t,10); return !isNaN(n)&&n>=parseInt(m[1],10)&&n<=parseInt(m[2],10); }
+  return token.toUpperCase()===t.toUpperCase();
+}
+function billerForTable(no){
+  var bs=billers();
+  for(var i=0;i<bs.length;i++){
+    var toks=String(bs[i].tables||'').split(',');
+    for(var j=0;j<toks.length;j++){ if(tok1(toks[j],no)) return bs[i]; }
+  }
+  return null;
+}
+function primaryBiller(){ var bs=billers(); return bs.find(function(b){return b.primary;})||bs[0]||null; }
+window.v31BillerForTable=billerForTable; window.v31PrimaryBiller=primaryBiller;
+
+/* ══ ORDER BOOK SYNC ENGINE (do PC, ek hisab) ══ */
+var sigs={}, applying=false, lanUp=false, lastSyncTs=0, pushQ={}, pushTimer=null, needRender=false;
+function idx(id){ for(var i=0;i<state.orders.length;i++){ if(state.orders[i]&&state.orders[i].id===id) return i; } return -1; }
+function stampMine(o){
+  var b=myBiller();
+  if(!o.bid&&b){ o.bid=b.id; o.billerName=b.name; }
+  if(!o._dev) o._dev=myDev;
+}
+function snapshot(){ try{ for(var i=0;i<state.orders.length;i++){ var o=state.orders[i]; if(o&&o.id) sigs[o.id]=JSON.stringify(o); } }catch(e){} }
+function scan(){
+  if(applying){ snapshot(); return; }
+  var changed=[];
+  try{
+    for(var i=0;i<state.orders.length;i++){
+      var o=state.orders[i]; if(!o||!o.id) continue;
+      var s=JSON.stringify(o);
+      if(sigs[o.id]!==s){ stampMine(o); o.mts=Date.now(); sigs[o.id]=JSON.stringify(o); changed.push(o.id); }
+    }
+  }catch(e){}
+  if(changed.length){ changed.forEach(function(id){ pushQ[id]=1; }); if(lanUp) schedulePush(); }
+  syncChip();
+}
+function schedulePush(){ if(pushTimer) return; pushTimer=setTimeout(doPush,350); }
+function doPush(){
+  pushTimer=null;
+  if(!origin||!lanUp) return;
+  Object.keys(pushQ).forEach(function(id){
+    var i=idx(id); if(i<0){ delete pushQ[id]; return; }
+    var o=state.orders[i];
+    fetch(origin+'/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({order:o})})
+      .then(function(r){ return r.json(); })
+      .then(function(j){ if(j&&j.ok){ delete pushQ[id]; lastSyncTs=Math.max(lastSyncTs,o.mts||0); syncChip(); } })
+      .catch(function(){});
+  });
+}
+setInterval(function(){ if(Object.keys(pushQ).length&&lanUp) doPush(); },30000);
+
+if(typeof window.save==='function'){
+  var _save=window.save;
+  window.save=function(){ var r=_save.apply(this,arguments); try{ scan(); }catch(e){} return r; };
+}
+
+function applyRemoteOrder(o){
+  if(!o||!o.id) return;
+  if(o._dev&&o._dev===myDev){ sigs[o.id]=JSON.stringify(o); return; }   /* own echo */
+  var i=idx(o.id);
+  if(i>=0){ if((state.orders[i].mts||0)>=(o.mts||0)) return; state.orders[i]=o; }
+  else{ state.orders.unshift(o); state.orders.sort(function(a,b){ return (b.ts||0)-(a.ts||0); }); }
+  sigs[o.id]=JSON.stringify(o);
+  lastSyncTs=Math.max(lastSyncTs,o.mts||0);
+  needRender=true;
+}
+function persistQuiet(){
+  applying=true;
+  try{ if(typeof window.save==='function') window.save(); }catch(e){}
+  applying=false;
+  if(needRender){ needRender=false; refreshUI(); }
+}
+function refreshUI(){
+  try{
+    if(document.querySelector('#pg-orders.active')&&typeof renderOrders==='function') renderOrders();
+    if(document.querySelector('#pg-dash.active')&&typeof loadDash==='function') loadDash();
+    if(document.querySelector('#pg-tables.active')&&typeof renderTableGrid==='function') renderTableGrid();
+  }catch(e){}
+  renderDashBillerCard();
+}
+function guardCounter(){
+  try{
+    var mx=state.counter||0;
+    state.orders.forEach(function(o){ if(o&&o._dev===myDev&&(o.num||0)>mx) mx=o.num; });
+    if(mx>(state.counter||0)){ state.counter=mx; localStorage.setItem('ja3_counter',String(mx)); if(typeof updateNext==='function') try{updateNext();}catch(e){} }
+  }catch(e){}
+}
+function pullOrders(cb){
+  if(!origin){ if(cb)cb(); return; }
+  var since=Date.now()-7*24*3600*1000;
+  fetch(origin+'/api/orders?since='+since,{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }).then(function(j){
+    if(!j){ if(cb)cb(); return; }
+    var serverIds={};
+    (j.orders||[]).forEach(function(o){ if(o&&o.id) serverIds[o.id]=1; applyRemoteOrder(o); });
+    persistQuiet(); guardCounter();
+    /* seed: mere recent orders jo server par nahi hain */
+    var mine=[], cutoff=Date.now()-7*24*3600*1000;
+    for(var i=0;i<state.orders.length;i++){
+      var o=state.orders[i]; if(!o||!o.id||serverIds[o.id]) continue;
+      if((o.ts||0)<cutoff && j.total>0) continue;
+      stampMine(o); if(!o.mts) o.mts=o.ts||Date.now();
+      mine.push(o); if(mine.length>=600) break;
+    }
+    snapshot();
+    if(mine.length){
+      var chunks=[]; for(var c2=0;c2<mine.length;c2+=150) chunks.push(mine.slice(c2,c2+150));
+      (function next(){
+        var ch=chunks.shift(); if(!ch){ if(cb)cb(); return; }
+        fetch(origin+'/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({orders:ch,from:myDev})})
+          .then(function(){ next(); }).catch(function(){ if(cb)cb(); });
+      })();
+    } else if(cb) cb();
+    syncChip();
+  }).catch(function(){ if(cb)cb(); });
+}
+
+/* ── SSE (apna stream — v28 wale se independent) ── */
+var es=null;
+function connectSSE(){
+  if(!origin||!window.EventSource) return;
+  try{ es=new EventSource(origin+'/api/events'); }catch(e){ return; }
+  es.addEventListener('hello',function(){ lanUp=true; syncChip(); if(Object.keys(pushQ).length) schedulePush(); });
+  es.addEventListener('pos-order',function(ev){ try{ applyRemoteOrder(JSON.parse(ev.data)); persistQuiet(); }catch(e){} });
+  es.addEventListener('pos-orders-seed',function(){ pullOrders(); });
+  es.addEventListener('config',function(ev){ try{ var c=JSON.parse(ev.data); if(c&&c.v31billers) applyRemoteCfg(c.v31billers); }catch(e){} });
+  es.addEventListener('order',function(){ setTimeout(autoTick,150); });
+  es.addEventListener('order-claimed',function(){ try{ if(window.v27ForcePoll) window.v27ForcePoll(); }catch(e){} });
+  es.onerror=function(){ lanUp=false; syncChip(); };
+}
+/* light poll fallback — SSE chhoot jaye to bhi 60s me hisab mil jaye */
+setInterval(function(){
+  if(!origin||!lanUp) return;
+  fetch(origin+'/api/orders?since='+(lastSyncTs||Date.now()-3600000),{cache:'no-store'})
+    .then(function(r){ return r.ok?r.json():null; })
+    .then(function(j){ if(j&&j.orders&&j.orders.length){ j.orders.forEach(applyRemoteOrder); persistQuiet(); } })
+    .catch(function(){});
+},60000);
+
+function ping(cb){
+  if(!origin){ cb(false); return; }
+  fetch(origin+'/api/ping',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; })
+    .then(function(j){ cb(!!(j&&j.ok),j); }).catch(function(){ cb(false); });
+}
+function pullCfg(){
+  if(!origin) return;
+  fetch(origin+'/api/config',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }).then(function(j){
+    if(j&&j.config&&j.config.v31billers) applyRemoteCfg(j.config.v31billers);
+    else { var c=cfg(); if(!c.updatedAt){ c.updatedAt=Date.now(); saveCfgLocal(c); } pushCfg(c); }
+  }).catch(function(){});
+}
+
+/* ── boot: engine start after panel chosen (admin/staff only) ── */
+var entered=false;
+if(typeof window.enterApp==='function'){
+  var _enter=window.enterApp;
+  window.enterApp=function(forceRole){
+    var r=_enter.apply(this,arguments);
+    if(!entered && forceRole!=='mobile'){ entered=true; setTimeout(startEngine,400); }
+    return r;
+  };
+} else { setTimeout(startEngine,2600); }
+function startEngine(){
+  ping(function(ok){
+    lanUp=ok;
+    if(ok){ pullCfg(); connectSSE(); pullOrders(function(){ setTimeout(maybePicker,300); setTimeout(autoTick,1200); }); }
+    renderBadge(); renderDashBillerCard();
+  });
+}
+
+/* ── biller picker overlay ── */
+function maybePicker(){ if(myBillerRaw()) return; if(!billers().length) return; showPicker(false); }
+function showPicker(closable){
+  var old=document.getElementById('v31-picker'); if(old) old.remove();
+  var cur=myBillerRaw();
+  var d=document.createElement('div'); d.id='v31-picker';
+  d.innerHTML='<div class="v31p-box">'+
+    '<div class="v31p-ttl">💼 Ye PC kaunsa <span style="color:var(--brand,#0a9e5c)">Biller</span> hai?</div>'+
+    '<div class="v31p-sub">Har biller ki apni bill series chalegi — hisab dono ka <b>ek hi jagah</b> judega.<br>Dusre PC par dusra biller chunna.</div>'+
+    '<div class="v31p-cards">'+billers().map(function(b){
+      return '<button type="button" class="v31p-card'+(cur===b.id?' on':'')+'" style="--bc:'+esc(b.color||'#0a9e5c')+'" onclick="JAB.pick(\''+esc(b.id)+'\')">'+
+        '<span class="v31p-dot"></span><span class="v31p-nm">'+esc(b.name)+'</span>'+
+        '<span class="v31p-pre">Bill series: '+esc((b.prefix||'B'))+esc(window._v28DevTag||'')+'0001…</span>'+
+        '<span class="v31p-tb">'+(b.tables?('🪑 '+esc(b.tables)):'🪑 Sab tables')+(b.primary?' · ⭐ Main':'')+'</span>'+
+      '</button>';
+    }).join('')+'</div>'+
+    (closable
+      ?'<button type="button" class="v31p-skip" onclick="JAB.closePicker()">Band karo</button>'
+      :'<button type="button" class="v31p-skip" onclick="JAB.skip()">⏭️ Skip — single counter mode</button>')+
+    '</div>';
+  document.body.appendChild(d);
+}
+
+/* ── header badge ── */
+function renderBadge(){
+  var bt=document.querySelector('.brand-text'); if(!bt) return;
+  var b=myBiller();
+  var el=document.getElementById('v31-badge');
+  if(!el){ el=document.createElement('div'); el.id='v31-badge'; bt.appendChild(el); el.onclick=function(){ showPicker(true); }; }
+  if(b){ el.innerHTML='<span class="v31b-dot" style="background:'+esc(b.color||'#0a9e5c')+'"></span>'+esc(b.name)+' <span class="v31b-sync" id="v31-sync-chip">●</span>'; el.style.display='inline-flex'; }
+  else { el.innerHTML='💼 Biller chuno'; el.style.display=billers().length?'inline-flex':'none'; }
+  syncChip();
+}
+function syncChip(){
+  var c=document.getElementById('v31-sync-chip'); if(!c) return;
+  var pend=Object.keys(pushQ).length;
+  c.style.color=lanUp?(pend?'#ffce54':'#5cf2ae'):'#ff8b81';
+  c.title=lanUp?(pend?(pend+' order sync baaki'):'Live sync ON'):'Server offline — sirf local save';
+}
+
+/* ── settings card ── */
+var work=null;
+function ensureWork(){ if(!work) work=JSON.parse(JSON.stringify(cfg())); }
+function injectCard(){
+  var pg=document.getElementById('pg-settings'); if(!pg) return;
+  if(document.getElementById('v31-biller-card')) return;
+  var wrap=pg.querySelector('.wrap')||pg;
+  var card=document.createElement('div'); card.className='card'; card.id='v31-biller-card';
+  card.innerHTML='<div class="card-h">💼 Biller System — Do Counter, Ek Hisab</div><div id="v31-biller-body"></div>';
+  wrap.appendChild(card);
+  renderCard();
+}
+function renderCard(){
+  var host=document.getElementById('v31-biller-body'); if(!host) return;
+  var c=work||cfg(); var mineRaw=myBillerRaw();
+  var h='';
+  h+='<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px">'+
+     '<span style="font-size:11.5px;font-weight:800;padding:6px 12px;border-radius:999px;'+(lanUp?'background:#e3f7ec;color:#0a7d46':'background:#fdeaea;color:#c0392b')+'">'+(lanUp?'🟢 Server LIVE — sab PC sync me':'🔴 Server offline — START_POS.bat chalao')+'</span>'+
+     '<label style="font-size:12.5px;font-weight:800;margin-left:auto">Ye PC:</label>'+
+     '<select id="v31-dev-sel" class="v31-inp">'+
+       '<option value="">— biller chuno —</option>'+
+       c.billers.map(function(b){ return '<option value="'+esc(b.id)+'"'+(mineRaw===b.id?' selected':'')+'>'+esc(b.name)+'</option>'; }).join('')+
+       '<option value="skip"'+(mineRaw==='skip'?' selected':'')+'>Single counter (koi nahi)</option>'+
+     '</select>'+
+     '<button type="button" class="btn btn-brand btn-sm" onclick="JAB.setDev()">📌 Set</button></div>';
+  h+='<table style="width:100%;border-collapse:collapse;font-size:12.5px">'+
+     '<tr><th style="text-align:left;padding:5px;color:var(--muted);font-size:10.5px">BILLER NAAM</th>'+
+     '<th style="text-align:left;padding:5px;color:var(--muted);font-size:10.5px">SERIES</th>'+
+     '<th style="padding:5px;color:var(--muted);font-size:10.5px">COLOR</th>'+
+     '<th style="text-align:left;padding:5px;color:var(--muted);font-size:10.5px">TABLES (khali = sab)</th>'+
+     '<th style="padding:5px;color:var(--muted);font-size:10.5px">MAIN</th><th></th></tr>'+
+     c.billers.map(function(b,i){
+       return '<tr>'+
+        '<td style="padding:5px"><input class="v31-inp" data-bf="name" data-bi="'+i+'" value="'+esc(b.name)+'" style="width:130px"></td>'+
+        '<td style="padding:5px"><input class="v31-inp" data-bf="prefix" data-bi="'+i+'" value="'+esc(b.prefix||'')+'" maxlength="2" style="width:52px;text-transform:uppercase;text-align:center;font-family:monospace;font-weight:800"></td>'+
+        '<td style="padding:5px;text-align:center"><input type="color" data-bf="color" data-bi="'+i+'" value="'+esc(b.color||'#0a9e5c')+'" style="width:38px;height:32px;border:none;background:none;cursor:pointer;padding:0"></td>'+
+        '<td style="padding:5px"><input class="v31-inp" data-bf="tables" data-bi="'+i+'" value="'+esc(b.tables||'')+'" placeholder="jaise: 1-11, 21B, p36" style="width:100%;min-width:150px"></td>'+
+        '<td style="padding:5px;text-align:center"><input type="radio" name="v31-primary" data-bi="'+i+'"'+(b.primary?' checked':'')+' style="width:16px;height:16px;accent-color:var(--brand,#0a9e5c)"></td>'+
+        '<td style="padding:5px"><button type="button" class="btn btn-ghost btn-sm" onclick="JAB.delBiller('+i+')">✕</button></td></tr>';
+     }).join('')+'</table>';
+  h+='<div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap">'+
+     '<button type="button" class="btn btn-ghost btn-sm" onclick="JAB.addBiller()">➕ Add Biller</button>'+
+     '<label style="display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:800;cursor:pointer;margin-left:auto">'+
+       '<input type="checkbox" id="v31-autoaccept"'+(c.autoAccept?' checked':'')+' style="width:17px;height:17px;accent-color:var(--brand,#0a9e5c)">'+
+       '📱 Mobile orders AUTO-ACCEPT + AUTO-PRINT</label></div>';
+  h+='<div style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.6">💡 <b>Tables tokens:</b> "1-11" (range) ya "21B, p36" (exact naam). Jis biller ke table par mobile order aayega, <b>usi ka PC</b> auto-accept karke KOT chhapega. ⭐ Main biller lawaris tables sambhalta hai. Bill series: prefix + PC tag + number (jaise C'+esc(window._v28DevTag||'A')+'0001).</div>';
+  h+='<div style="margin-top:14px"><button type="button" class="btn btn-brand" onclick="JAB.saveCard()">💾 Save &amp; Sab Devices Par Sync</button></div>';
+  host.innerHTML=h;
+  host.querySelectorAll('[data-bf]').forEach(function(inp){
+    inp.onchange=function(){
+      ensureWork();
+      var i=parseInt(inp.getAttribute('data-bi'),10), f=inp.getAttribute('data-bf');
+      if(!work.billers[i]) return;
+      var v=inp.value;
+      if(f==='prefix'){ v=v.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,2); inp.value=v; }
+      work.billers[i][f]=v;
+    };
+  });
+  host.querySelectorAll('input[name="v31-primary"]').forEach(function(r){
+    r.onchange=function(){ ensureWork(); var i=parseInt(r.getAttribute('data-bi'),10); work.billers.forEach(function(b,j){ b.primary=(j===i); }); };
+  });
+  var aa=document.getElementById('v31-autoaccept');
+  if(aa) aa.onchange=function(){ ensureWork(); work.autoAccept=aa.checked; };
+}
+
+/* ── dashboard: aaj ka biller-wise hisab ── */
+function renderDashBillerCard(){
+  var dash=document.querySelector('#pg-dash .wrap'); if(!dash) return;
+  var bs=billers(); if(!bs.length) return;
+  var t=(typeof today==='function')?today():new Date().toISOString().slice(0,10);
+  var todays=[]; try{ todays=state.orders.filter(function(o){ return o.date===t&&o.status!=='Cancelled'; }); }catch(e){}
+  var byB={};
+  todays.forEach(function(o){ var k=o.bid||'_none'; if(!byB[k]) byB[k]={n:0,amt:0}; byB[k].n++; byB[k].amt+=(o.total||0); });
+  var card=document.getElementById('v31-dash-billers');
+  if(!card){
+    card=document.createElement('div'); card.className='card'; card.id='v31-dash-billers';
+    var first=dash.querySelector('.card');
+    if(first) dash.insertBefore(card,first); else dash.appendChild(card);
+  }
+  var mineb=myBiller();
+  card.innerHTML='<div class="card-h">💼 Aaj — Biller-wise <span style="font-size:11px;color:var(--muted);font-weight:700;margin-left:6px">(dono counter ka live hisab)</span></div>'+
+    '<div style="display:flex;gap:10px;flex-wrap:wrap">'+
+    bs.map(function(b){
+      var d=byB[b.id]||{n:0,amt:0};
+      return '<div class="v31-bchip"'+(mineb&&mineb.id===b.id?' style="border-color:'+esc(b.color)+';box-shadow:0 0 0 1.5px '+esc(b.color)+' inset"':'')+'>'+
+        '<span class="d" style="background:'+esc(b.color||'#888')+'"></span>'+esc(b.name)+(mineb&&mineb.id===b.id?' (ye PC)':'')+
+        ' · <b>'+d.n+'</b> bills · <b>'+(typeof money==='function'?money(d.amt):'₹'+d.amt)+'</b></div>';
+    }).join('')+
+    (byB._none?('<div class="v31-bchip"><span class="d" style="background:#98a2ac"></span>Bina biller · <b>'+byB._none.n+'</b> bills · <b>'+(typeof money==='function'?money(byB._none.amt):'₹'+byB._none.amt)+'</b></div>'):'')+
+    '</div>';
+}
+
+/* ── table grid: owner tag har table par ── */
+function decorateTables(){
+  var bs=billers(); if(!bs.length) return;
+  var mine=myBiller();
+  document.querySelectorAll('.table-card').forEach(function(card){
+    var n=card.querySelector('.tc-number'); var no=n?n.textContent.trim():'';
+    var owner=billerForTable(no);
+    var tag=card.querySelector('.v31-towner');
+    if(owner){
+      if(!tag){ tag=document.createElement('span'); tag.className='v31-towner'; card.appendChild(tag); }
+      tag.textContent=owner.name; tag.style.background=owner.color||'#888';
+      card.classList.toggle('v31-not-mine',!!(mine&&owner.id!==mine.id));
+    } else { if(tag) tag.remove(); card.classList.remove('v31-not-mine'); }
+  });
+}
+if(typeof window.renderTableGrid==='function'){
+  var _grid=window.renderTableGrid;
+  window.renderTableGrid=function(){ var r=_grid.apply(this,arguments); try{ decorateTables(); }catch(e){} return r; };
+}
+
+/* ── page hooks ── */
+if(typeof window.onShow==='function'){
+  var _show=window.onShow;
+  window.onShow=function(pg){
+    var r=_show.apply(this,arguments);
+    if(pg==='settings'){ try{ injectCard(); renderCard(); }catch(e){} }
+    if(pg==='dash'){ setTimeout(renderDashBillerCard,250); }
+    return r;
+  };
+}
+
+/* ══ MOBILE AUTO-ACCEPT + AUTO-PRINT (Petpooja jaisa — bina Accept dabaye) ══
+   Rule: jis biller ke table ka order, USI ka PC claim karta hai (server par
+   atomic claim — do PC kabhi double-print nahi karenge). Owner PC band ho to
+   7 sec baad Main biller sambhal leta hai. Print sirf tab jab server-routing
+   configure hai (popup kabhi nahi khulega unattended). */
+var autoBusy={};
+function printCfgOn(){
+  try{ var c=JSON.parse(localStorage.getItem('ja29_printcfg')||'{}');
+    if(c.on&&(c.def||(c.rules||[]).some(function(r){ return r.printer; }))) return true; }catch(e){}
+  try{ var m=JSON.parse(localStorage.getItem('ja_v28_printmap')||'{}');
+    if(m.enabled!==false&&(m.bill||Object.keys(m.tables||{}).length||Object.keys(m.stations||{}).some(function(s){ return m.stations[s]; }))) return true; }catch(e){}
+  return false;
+}
+function shouldHandle(mo){
+  var owner=billerForTable(mo.tableNo), mine=myBiller(), prim=primaryBiller();
+  if(owner){
+    if(mine&&mine.id===owner.id) return 0;                      /* owner → turant */
+    if(mine&&prim&&mine.id===prim.id) return 7000;              /* owner PC off? → main biller fallback */
+    return -1;
+  }
+  if(!mine) return 0;                                           /* single-counter mode */
+  if(prim&&mine.id===prim.id) return 0;                         /* lawaris table → main biller */
+  return -1;
+}
+function autoTick(){
+  if(!cfg().autoAccept||!lanUp||!origin) return;
+  fetch(origin+'/api/mobile-orders',{cache:'no-store'}).then(function(r){ return r.ok?r.json():null; }).then(function(j){
+    ((j&&j.orders)||[]).forEach(function(mo){
+      if(!mo||mo.status!=='pending'||mo.claimedBy||autoBusy[mo.id]) return;
+      var delay=shouldHandle(mo);
+      if(delay<0) return;
+      autoBusy[mo.id]=true;
+      setTimeout(function(){ tryClaim(mo); },delay);
+    });
+  }).catch(function(){});
+}
+function tryClaim(mo){
+  if(!cfg().autoAccept){ delete autoBusy[mo.id]; return; }
+  var mine=myBiller();
+  fetch(origin+'/api/mobile-orders/claim',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({id:mo.id,biller:(mine?mine.name:'solo')+'@'+myDev})})
+    .then(function(r){ return r.json(); })
+    .then(function(j){
+      if(!(j&&j.claimed)){ delete autoBusy[mo.id]; return; }    /* kisi aur ne le liya */
+      autoAcceptNow(mo);
+    })
+    .catch(function(){ delete autoBusy[mo.id]; });
+}
+function autoAcceptNow(mo){
+  var printed=false, newOrder=null;
+  try{
+    if(typeof window.v27_acceptMobile!=='function') return;
+    var beforeTop=state.orders.length?state.orders[0].id:null;
+    window.v27_acceptMobile(mo.id);
+    if(state.orders.length&&state.orders[0].id!==beforeTop) newOrder=state.orders[0];
+    if(newOrder) printed=autoPrintKOT(newOrder,mo);
+    toastSafe('🤖 AUTO: Table '+mo.tableNo+' accept'+(newOrder?(' → '+newOrder.id):'')+(printed?' · 🖨️ KOT chhap gaya':''));
+    try{ if(window.v28Tone) v28Tone.accepted(); }catch(e){}
+    if(window.JASEC&&JASEC.log){ try{ JASEC.log('Mobile Order Auto-Accepted',{detail:'Table '+mo.tableNo+' → '+(newOrder?newOrder.id:'?')+' · '+((mo.items||[]).length)+' items'+(printed?' · KOT printed':''),skipReason:true}); }catch(e){} }
+  }catch(e){ try{ console.warn('v31 autoAccept err',e); }catch(e2){} }
+  finally{ setTimeout(function(){ delete autoBusy[mo.id]; },5000); }
+}
+function autoPrintKOT(order,mo){
+  if(!printCfgOn()) return false;
+  try{
+    if(typeof v22State!=='undefined'&&v22State&&Array.isArray(v22State.kotOrders)){
+      var kot={ id:'KOT'+String(Date.now()).slice(-6), orderId:order.id,
+        trainNo:String(mo.tableNo||order.train||''), trainName:'', coach:'', seat:'',
+        items:(order.items||[]).map(function(i){ return {name:i.name,qty:i.qty,note:'',cat:i.cat||'',station:i.station||'kitchen'}; }),
+        status:'pending', ts:Date.now(), startTs:null, readyTs:null,
+        orderType:(mo.orderType==='parcel'?'parcel':undefined) };
+      v22State.kotOrders.unshift(kot);
+      if(v22State.kotOrders.length>200) v22State.kotOrders=v22State.kotOrders.slice(0,200);
+      try{ if(typeof v22Save==='function') v22Save(); }catch(e){}
+      if(typeof window.printKOT==='function'){ window.printKOT(kot.id); return true; }
+    }
+  }catch(e){}
+  return false;
+}
+setInterval(autoTick,20000);
+
+/* ── public API ── */
+window.JAB={
+  _auto:autoTick,
+  pick:function(id){
+    try{ localStorage.setItem(MY_LS,id); }catch(e){}
+    var d=document.getElementById('v31-picker'); if(d) d.remove();
+    var b=myBiller();
+    renderBadge(); renderCard();
+    toastSafe('💼 Ye PC ab "'+(b?b.name:id)+'" biller hai — bill series '+(b?(b.prefix+(window._v28DevTag||'')):''));
+    if(window.JASEC&&JASEC.log){ try{ JASEC.log('Device Biller Set',{detail:(b?b.name:id)+' @ '+myDev,skipReason:true}); }catch(e){} }
+    if(typeof updateNext==='function'){ try{ updateNext(); }catch(e){} }
+    try{ decorateTables(); }catch(e){}
+  },
+  skip:function(){ try{ localStorage.setItem(MY_LS,'skip'); }catch(e){} var d=document.getElementById('v31-picker'); if(d) d.remove(); renderBadge(); toastSafe('Single counter mode — badalna ho to Settings → Biller System'); },
+  closePicker:function(){ var d=document.getElementById('v31-picker'); if(d) d.remove(); },
+  setDev:function(){
+    var s=document.getElementById('v31-dev-sel');
+    if(!s||!s.value){ toastSafe('⚠️ Pehle biller chuno'); return; }
+    JAB.pick(s.value);
+  },
+  addBiller:function(){
+    ensureWork();
+    var n=work.billers.length+1;
+    var colors=['#0a9e5c','#f07c10','#2456c4','#9b2fae','#c0392b','#0a8f9e'];
+    work.billers.push({id:'b'+Date.now().toString(36),name:'Biller '+n,prefix:String.fromCharCode(64+Math.min(n,26)),color:colors[(n-1)%colors.length],tables:''});
+    renderCard();
+  },
+  delBiller:function(i){
+    ensureWork();
+    if(work.billers.length<=1){ toastSafe('⚠️ Kam se kam 1 biller chahiye'); return; }
+    work.billers.splice(i,1); renderCard();
+  },
+  saveCard:function(){
+    ensureWork();
+    var seen={}, dup=false;
+    work.billers.forEach(function(b){
+      b.name=(b.name||'').trim()||'Biller';
+      b.prefix=((b.prefix||'B').toUpperCase().replace(/[^A-Z0-9]/g,'')||'B').slice(0,2);
+      if(seen[b.prefix]) dup=true; seen[b.prefix]=1;
+    });
+    if(dup){ toastSafe('❌ Har biller ka SERIES prefix alag hona chahiye','error'); return; }
+    if(!work.billers.some(function(b){ return b.primary; })) work.billers[0].primary=true;
+    var doSave=function(){
+      work.updatedAt=Date.now();
+      saveCfgLocal(work); pushCfg(work);
+      if(window.JASEC&&JASEC.log){ try{ JASEC.log('Biller Config Saved',{detail:work.billers.map(function(b){ return b.name+'('+b.prefix+')'; }).join(', '),skipReason:true}); }catch(e){} }
+      toastSafe('✅ Biller system saved — sab devices par sync ho gaya');
+      work=null; renderCard(); renderBadge(); renderDashBillerCard();
+      try{ decorateTables(); }catch(e){}
+    };
+    if(window.JASEC&&JASEC.can&&JASEC.can('set.edit')){ doSave(); }
+    else if(window.JASEC&&JASEC.guard){ JASEC.guard('set.edit',{title:'Biller System Change',detail:'Billers: '+work.billers.length},doSave); }
+    else doSave();
+  },
+  showPicker:function(){ showPicker(true); },
+  _sync:{ pull:pullOrders, push:doPush, state:function(){ return {lanUp:lanUp,pending:Object.keys(pushQ).length,lastSyncTs:lastSyncTs}; } }
+};
+
+/* ── init ── */
+snapshot();                                   /* baseline: sirf NAYE changes push honge */
+injectCard(); renderBadge();
+setTimeout(function(){ renderDashBillerCard(); },1800);
+console.log('💼 [v31] Biller Hub ready — biller: '+(myBiller()?myBiller().name:'(not set)')+' · dev '+myDev);
 })();
 </script>
 </body>

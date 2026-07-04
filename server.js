@@ -26,7 +26,9 @@ var DATA_DIR = path.join(ROOT, 'data');
 var STATE_FILE = path.join(DATA_DIR, 'lan-state.json');
 
 /* ── persistent shared state ── */
-var state = { mobileOrders: [], menu: [], tables: {}, config: {} };
+/* v31: `orders` = the shared POS order book (bills from every biller PC).
+   Both biller counters push/pull here so hisab ek hi jagah judta hai. */
+var state = { mobileOrders: [], menu: [], tables: {}, config: {}, orders: [] };
 try { if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true }); } catch (e) {}
 /* Phase 2: try main file; if missing or corrupt, fall back to .bak. */
 function _tryLoadStateFile(file) {
@@ -45,7 +47,8 @@ if (loaded) {
   state.menu   = Array.isArray(loaded.menu) ? loaded.menu : [];
   state.tables = (loaded.tables && typeof loaded.tables === 'object') ? loaded.tables : {};
   state.config = (loaded.config && typeof loaded.config === 'object') ? loaded.config : {};
-  console.log('✅ Loaded saved state (' + state.mobileOrders.length + ' orders, ' + state.menu.length + ' menu items)');
+  state.orders = Array.isArray(loaded.orders) ? loaded.orders : [];
+  console.log('✅ Loaded saved state (' + state.mobileOrders.length + ' mobile orders, ' + state.orders.length + ' bills, ' + state.menu.length + ' menu items)');
 }
 
 var saveTimer = null;
@@ -92,6 +95,7 @@ var MAX_BODY = {
   tables:  512 * 1024,        // 512 KB
   config:  256 * 1024,        // 256 KB
   order:   128 * 1024,        // 128 KB per order
+  ordersBatch: 4 * 1024 * 1024, // 4 MB — first-time seed push of the local order book
 };
 function _byteLen(obj) { try { return Buffer.byteLength(JSON.stringify(obj), 'utf8'); } catch (e) { return Infinity; } }
 function _isPlainObject(v) { return v && typeof v === 'object' && !Array.isArray(v); }
@@ -135,6 +139,28 @@ function _validateMobileOrder(o) {
   if (o.items && o.items.length > 500) return 'too many items (>500)';
   if (o.tableNo != null && String(o.tableNo).length > 32) return 'tableNo too long';
   return null;
+}
+/* v31: a POS bill (order book record). Same shape the app keeps in state.orders. */
+function _validatePosOrder(o) {
+  if (!_isPlainObject(o)) return 'order must be an object';
+  if (typeof o.id !== 'string' || !o.id || o.id.length > 64) return 'id must be a non-empty string ≤64 chars';
+  if (o.items != null && !Array.isArray(o.items)) return 'items must be an array';
+  if (o.items && o.items.length > 500) return 'too many items (>500)';
+  return null;
+}
+/* v31: upsert one bill into the shared book. Last-write-wins by `mts`
+   (modified timestamp) so an older echo can never overwrite a newer edit. */
+function _upsertPosOrder(o) {
+  var i = state.orders.findIndex(function (x) { return x.id === o.id; });
+  if (i >= 0) {
+    var cur = state.orders[i];
+    if ((cur.mts || 0) > (o.mts || 0)) return false;   // stale write → ignore
+    state.orders[i] = o;
+  } else {
+    state.orders.push(o);
+    if (state.orders.length > 5000) state.orders = state.orders.slice(-5000);
+  }
+  return true;
 }
 function _sendErr(res, code, msg) { return sendJSON(res, code, { ok: false, error: msg }); }
 
@@ -264,7 +290,7 @@ var server = http.createServer(function (req, res) {
 
   /* ---------- API ---------- */
   if (p === '/api/ping') {
-    return sendJSON(res, 200, { ok: true, name: 'jay-ambe-lan', ver: 28, ts: Date.now(), ips: localIPs(), platform: process.platform, authOn: !!(state.config && state.config.requireToken) });
+    return sendJSON(res, 200, { ok: true, name: 'jay-ambe-lan', ver: 31, ts: Date.now(), ips: localIPs(), platform: process.platform, authOn: !!(state.config && state.config.requireToken) });
   }
 
   // v28p3 Phase 5: optional shared-secret token check on writes.
@@ -313,6 +339,65 @@ var server = http.createServer(function (req, res) {
       if (o) { o.status = body.status || o.status; saveState(); }
       broadcast('order-status', { id: body.id, status: body.status });
       sendJSON(res, 200, { ok: true });
+    });
+  }
+  /* v31: atomic claim — first biller to claim a pending mobile order wins.
+     Node is single-threaded, so this check-and-set can never race: with two
+     biller PCs on auto-accept, exactly ONE gets claimed:true and prints. */
+  if (p === '/api/mobile-orders/claim' && req.method === 'POST') {
+    return readBody(req, function (body) {
+      if (!body || !body.id) return _sendErr(res, 400, 'missing id');
+      var o = state.mobileOrders.find(function (x) { return x.id === body.id; });
+      if (!o) return sendJSON(res, 200, { ok: true, claimed: false, reason: 'not found' });
+      var who = String(body.biller || 'unknown').slice(0, 64);
+      if (o.claimedBy && o.claimedBy !== who) {
+        return sendJSON(res, 200, { ok: true, claimed: false, by: o.claimedBy });
+      }
+      if (o.status && o.status !== 'pending' && !o.claimedBy) {
+        return sendJSON(res, 200, { ok: true, claimed: false, reason: 'already ' + o.status });
+      }
+      o.claimedBy = who; o.claimedAt = Date.now();
+      saveState();
+      broadcast('order-claimed', { id: o.id, by: who });
+      sendJSON(res, 200, { ok: true, claimed: true, by: who });
+    });
+  }
+
+  /* ── v31: shared POS order book (2-biller system) ──
+     Every bill made on any biller PC is upserted here and pushed to all
+     other devices via SSE, so dono billers ka hisab ek hi jagah judta hai. */
+  if (p === '/api/orders' && req.method === 'GET') {
+    // optional ?since=<ts> → only bills modified after that time (light polling)
+    var since = parseInt(u.query.since || '0', 10) || 0;
+    var list = since ? state.orders.filter(function (o) { return (o.mts || 0) > since; }) : state.orders;
+    return sendJSON(res, 200, { orders: list, total: state.orders.length, ts: Date.now() });
+  }
+  if (p === '/api/orders' && req.method === 'POST') {
+    return readBody(req, function (body) {
+      if (!body) return _sendErr(res, 400, 'bad body');
+      // batch seed: {orders:[...]} — first sync push of an existing local book
+      if (Array.isArray(body.orders)) {
+        if (_byteLen(body) > MAX_BODY.ordersBatch) return _sendErr(res, 413, 'orders batch too large');
+        if (body.orders.length > 3000) return _sendErr(res, 400, 'too many orders in one batch');
+        var accepted = 0;
+        for (var bi = 0; bi < body.orders.length; bi++) {
+          var bo = body.orders[bi];
+          if (_validatePosOrder(bo)) continue;
+          if (_upsertPosOrder(bo)) accepted++;
+        }
+        saveState();
+        broadcast('pos-orders-seed', { count: accepted, from: body.from || '' });
+        return sendJSON(res, 200, { ok: true, accepted: accepted, total: state.orders.length });
+      }
+      // single upsert: {order:{...}}
+      var o = body.order;
+      var err = _validatePosOrder(o);
+      if (err) return _sendErr(res, 400, err);
+      if (_byteLen(o) > MAX_BODY.order) return _sendErr(res, 413, 'order too large');
+      var applied = _upsertPosOrder(o);
+      saveState();
+      if (applied) broadcast('pos-order', o);
+      sendJSON(res, 200, { ok: true, applied: applied, total: state.orders.length });
     });
   }
   if (p === '/api/menu' && req.method === 'GET') {
@@ -372,9 +457,9 @@ var server = http.createServer(function (req, res) {
       'Content-Disposition': 'attachment; filename="' + fname + '"'
     });
     res.end(JSON.stringify({
-      app: 'jay-ambe-lan', ver: 28, ts: Date.now(),
+      app: 'jay-ambe-lan', ver: 31, ts: Date.now(),
       mobileOrders: state.mobileOrders, menu: state.menu,
-      tables: state.tables, config: state.config
+      tables: state.tables, config: state.config, orders: state.orders
     }));
     return;
   }
