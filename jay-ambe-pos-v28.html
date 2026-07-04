@@ -9359,6 +9359,9 @@ else { document.addEventListener('DOMContentLoaded', jaSecurityInit); }
   .v27m-drawer.open .v27m-cartfull{max-height:46vh;overflow-y:auto}
   .v27m-crow{display:flex;align-items:center;gap:10px;padding:10px 16px;border-top:1px solid rgba(255,255,255,.1)}
   .v27m-crow .nm{flex:1;font-size:14px;font-weight:600}
+  .v27m-note{font-size:11px;opacity:.75;font-style:italic;margin-top:2px;font-weight:500}
+  .v27m-noteBtn{background:rgba(255,255,255,.12);border:none;color:#fff;width:34px;height:34px;border-radius:10px;font-size:15px;cursor:pointer;flex:0 0 auto}
+  .v27m-noteBtn:active{transform:scale(.92)}
   .v27m-step{display:flex;align-items:center;gap:0;border:1.5px solid rgba(255,255,255,.3);border-radius:10px;overflow:hidden}
   .v27m-step button{width:34px;height:34px;border:none;background:rgba(255,255,255,.12);color:#fff;font-size:18px;font-weight:700;cursor:pointer}
   .v27m-step span{min-width:30px;text-align:center;font-weight:800}
@@ -9643,7 +9646,8 @@ function v27RenderMobileDrawer(){
   if(full){
     if(!v27m.cart.length){ full.innerHTML='<div style="padding:16px;text-align:center;opacity:.7">Cart empty</div>'; }
     else full.innerHTML=v27m.cart.map(function(c){
-      return '<div class="v27m-crow"><div class="nm">'+v27Esc(c.name)+'</div>'+
+      return '<div class="v27m-crow"><div class="nm">'+v27Esc(c.name)+(c.note?'<div class="v27m-note">📝 '+v27Esc(c.note)+'</div>':'')+'</div>'+
+        '<button class="v27m-noteBtn" onclick="v27_note('+JSON.stringify(c.id).replace(/"/g,'&quot;')+')" title="Add note">📝</button>'+
         '<div class="v27m-step"><button onclick="v27_qty('+JSON.stringify(c.id).replace(/"/g,'&quot;')+',-1)">−</button><span>'+c.qty+'</span><button onclick="v27_qty('+JSON.stringify(c.id).replace(/"/g,'&quot;')+',1)">+</button></div>'+
         '<div style="min-width:64px;text-align:right;font-weight:800">'+(typeof money==='function'?money(c.price*c.qty):'₹'+c.price*c.qty)+'</div></div>';
     }).join('');
@@ -9662,6 +9666,13 @@ window.v27_qty=function(id,d){
   var c=v27m.cart.find(function(x){return x.id===id;}); if(!c) return;
   c.qty+=d; if(c.qty<=0) v27m.cart=v27m.cart.filter(function(x){return x.id!==id;});
   v27RenderMobileMenu(); v27RenderMobileDrawer();
+};
+window.v27_note=function(id){
+  var c=v27m.cart.find(function(x){return x.id===id;}); if(!c) return;
+  var n=prompt('Note for '+c.name+' (jaise: no onion, extra spicy):', c.note||'');
+  if(n===null) return;
+  c.note=n.trim();
+  v27RenderMobileDrawer();
 };
 window.v27_toggleCart=function(){ var d=document.getElementById('v27m-drawer'); if(d) d.classList.toggle('open'); };
 window.v27_showTablePicker=function(){
@@ -9801,7 +9812,7 @@ window.v27_acceptMobile=function(id){
   var items=(mo.items||[]).map(function(c){
     var m=state.menu.find(function(x){return x.id===c.id;}); var cat=m?(m.cat||''):'';
     var co=cats.find(function(x){return x.name===cat;}); var st=co?(co.station||'kitchen'):'kitchen';
-    return {id:c.id,name:c.name,price:c.price,qty:c.qty,comm:0,cat:cat,station:st};
+    return {id:c.id,name:c.name,price:c.price,qty:c.qty,comm:0,cat:cat,station:st,note:c.note||''};
   });
   var total=items.reduce(function(s,i){return s+i.price*i.qty;},0);
   state.counter++; var now=new Date();
@@ -9980,23 +9991,6 @@ else { setTimeout(v27Init,300); }
   .v27-no-parcel #pg-parcel,
   .v27-no-parcel #pg-admin-parcel{display:none!important}
 
-  #v27-menu-screen{position:fixed;inset:0;z-index:100000;background:linear-gradient(135deg,#0d1a14,#162119 55%,#1b2a21);color:#e8f5ee;display:flex;flex-direction:column;font-family:'DM Sans',system-ui,sans-serif}
-  .v27ms-head{display:flex;align-items:center;gap:12px;padding:16px;background:rgba(0,0,0,.28);position:sticky;top:0;box-shadow:0 2px 16px rgba(0,0,0,.4)}
-  .v27ms-title{font-family:'Sora',sans-serif;font-weight:800;font-size:18px}
-  .v27ms-sub{font-size:12px;opacity:.72;margin-top:2px}
-  .v27ms-call{margin-left:auto;background:linear-gradient(135deg,#f07c10,#c96208);color:#fff;border:none;padding:10px 14px;border-radius:12px;font-weight:800;font-size:13px;cursor:pointer}
-  .v27ms-body{flex:1;overflow-y:auto;padding:8px 14px 130px}
-  .v27ms-cat{font-family:'Sora',sans-serif;font-weight:800;font-size:13px;color:#0ec98a;text-transform:uppercase;letter-spacing:.6px;margin:18px 0 4px;border-bottom:1px solid rgba(255,255,255,.12);padding-bottom:5px}
-  .v27ms-item{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.06)}
-  .v27ms-veg{width:13px;height:13px;border:2px solid #2ecc71;border-radius:3px;position:relative;flex:0 0 auto}
-  .v27ms-veg::after{content:'';position:absolute;inset:2.5px;background:#2ecc71;border-radius:50%}
-  .v27ms-veg.nv{border-color:#e74c3c}.v27ms-veg.nv::after{background:#e74c3c}
-  .v27ms-nm{flex:1;font-weight:600;font-size:15px}
-  .v27ms-pr{font-weight:800;color:#ff9a38;font-size:15px}
-  .v27ms-add{width:38px;height:38px;border-radius:11px;border:none;background:linear-gradient(135deg,#077a57,#09a872);color:#fff;font-size:17px;font-weight:800;flex:0 0 auto;cursor:pointer}
-  .v27ms-cartbar{position:fixed;left:0;right:0;bottom:0;display:flex;align-items:center;gap:12px;padding:14px 18px;background:rgba(0,0,0,.55);backdrop-filter:blur(8px)}
-  .v27ms-cartbar>div{flex:1;font-size:15px}
-  .v27ms-send{background:linear-gradient(135deg,#f07c10,#ff9a38);color:#fff;border:none;padding:13px 22px;border-radius:14px;font-weight:800;font-size:15px;cursor:pointer}
   .v27ob-overlay{position:fixed;inset:0;z-index:9000;background:rgba(10,26,20,.6);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:18px}
   .v27ob-card{background:var(--card,#fff);color:var(--ink,#0a1a14);border-radius:20px;padding:22px;max-width:430px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.4);max-height:92vh;overflow:auto}
   .v27ob-h{font-family:'Sora',sans-serif;font-weight:800;font-size:18px;margin-bottom:6px}
@@ -10009,12 +10003,7 @@ else { setTimeout(v27Init,300); }
 <script id="v27lan-script">
 (function(){
 'use strict';
-var url=new URLSearchParams(location.search);
-var isMenuMode=(url.get('role')==='menu' || url.get('menu')==='1');
-var menuTable=url.get('table')||'';
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
-function money(n){ return '₹'+Math.round(n||0).toLocaleString('en-IN'); }
-function shopName(){ try{var b=JSON.parse(localStorage.getItem('ja3_bset')||'{}'); return b.name||b.shop||b.shopName||'Jay Ambe Fast Food & Restaurant';}catch(e){return 'Jay Ambe Fast Food';} }
 
 /* ---- Hide Parcel feature (UI only; code intact) ---- */
 function hideParcel(){
@@ -10022,100 +10011,6 @@ function hideParcel(){
   var qb=document.getElementById('quick-bar');
   if(qb){ Array.prototype.forEach.call(qb.querySelectorAll('button'),function(b){ var oc=b.getAttribute('onclick')||''; if(/parcel/i.test(oc)||/parcel/i.test(b.textContent||'')) b.style.display='none'; }); }
 }
-
-/* ---- Customer Digital Menu (live over LAN, offline) ---- */
-var _menuCache=[], menuCart=[];
-function fetchMenu(cb){
-  fetch(location.origin+'/api/menu',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;})
-    .then(function(j){ if(j&&j.menu&&j.menu.length){ _menuCache=j.menu; } else throw 0; cb&&cb(); })
-    .catch(function(){ try{_menuCache=JSON.parse(localStorage.getItem('ja3_menu')||'[]');}catch(e){_menuCache=[];} cb&&cb(); });
-}
-// v28: instant menu refresh used by the SSE stream when admin updates the menu
-window.v27_menuForceRefresh=function(){ try{ fetchMenu(renderMenu); }catch(e){} };
-function buildMenuScreen(){
-  if(document.getElementById('v27-menu-screen')) return;
-  var s=document.createElement('div'); s.id='v27-menu-screen';
-  s.innerHTML='<div class="v27ms-head"><div><div class="v27ms-title">'+esc(shopName())+'</div><div class="v27ms-sub">'+(menuTable?('🪑 Table '+esc(menuTable)):'Digital Menu')+'</div></div><button class="v27ms-call" onclick="v27_callWaiter()">📞 Call Waiter</button></div>'+
-    '<div class="v27ms-body" id="v27ms-body"><div style="text-align:center;padding:46px;opacity:.6">Loading menu…</div></div>'+
-    '<div class="v27ms-cartbar" id="v27ms-cartbar" style="display:none"><div><b id="v27ms-cc">0</b> items · <b id="v27ms-ct">₹0</b></div><button class="v27ms-send" onclick="v27_menuSend()">Send Order →</button></div>';
-  document.body.appendChild(s); document.body.style.overflow='hidden';
-  fetchMenu(renderMenu);
-  // SSE 'menu' event (below) already triggers an instant refetch on real changes —
-  // this is just the fallback for a missed event, so a slow interval is enough.
-  setInterval(function(){ fetchMenu(renderMenu); }, 180000);
-}
-function renderMenu(){
-  var body=document.getElementById('v27ms-body'); if(!body) return;
-  var menu=(_menuCache||[]).filter(function(m){return m.available!==false;});
-  if(!menu.length){ body.innerHTML='<div style="text-align:center;padding:46px;opacity:.6">Menu abhi available nahi hai.</div>'; return; }
-  var groups={}, order=[];
-  menu.forEach(function(m){ var c=m.cat||'Other'; if(!groups[c]){groups[c]=[];order.push(c);} groups[c].push(m); });
-  body.innerHTML=order.map(function(c){
-    return '<div class="v27ms-cat">'+esc(c)+'</div>'+groups[c].map(function(m){
-      var inC=menuCart.find(function(x){return x.id===m.id;});
-      return '<div class="v27ms-item"><span class="v27ms-veg'+(m.nonveg?' nv':'')+'"></span>'+
-        '<div class="v27ms-nm">'+esc(m.name)+'</div><div class="v27ms-pr">'+money(m.price)+'</div>'+
-        '<button class="v27ms-add" onclick="v27_menuAdd('+JSON.stringify(m.id).replace(/"/g,'&quot;')+')">'+(inC?('×'+inC.qty):'+')+'</button></div>';
-    }).join('');
-  }).join('');
-  menuCartRefresh();
-}
-function menuCartRefresh(){ var cc=document.getElementById('v27ms-cc'),ct=document.getElementById('v27ms-ct'),bar=document.getElementById('v27ms-cartbar');
-  var n=menuCart.reduce(function(s,c){return s+c.qty;},0),t=menuCart.reduce(function(s,c){return s+c.price*c.qty;},0);
-  if(cc)cc.textContent=n; if(ct)ct.textContent=money(t); if(bar)bar.style.display=n?'flex':'none'; }
-window.v27_menuAdd=function(id){ var m=_menuCache.find(function(x){return x.id===id;}); if(!m)return; var c=menuCart.find(function(x){return x.id===id;}); if(c)c.qty++; else menuCart.push({id:m.id,name:m.name,price:m.price,qty:1}); renderMenu(); };
-/* ── checkout sheet: order type (Table/Parcel) + payment + optional contact ── */
-var co={ type:(menuTable?'table':'table'), table:(menuTable||''), pay:'Cash' };
-window.v27_menuSend=function(){ if(!menuCart.length) return; v27_openCheckout(); };
-window.v27_openCheckout=function(){
-  var ex=document.getElementById('v27co'); if(ex) ex.parentNode.removeChild(ex);
-  var total=menuCart.reduce(function(s,c){return s+c.price*c.qty;},0);
-  if(!document.getElementById('v27co-style')){ var st=document.createElement('style'); st.id='v27co-style';
-    st.textContent='.v27co-seg{flex:1;padding:12px;border-radius:12px;border:1.5px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:#cfe9dc;font-weight:700;font-size:14px;cursor:pointer}.v27co-seg.on{background:linear-gradient(135deg,#077a57,#09a872);color:#fff;border-color:#0ec98a}.v27co-in{width:100%;padding:12px 14px;border-radius:12px;border:1.5px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:#fff;font-size:15px;margin-bottom:9px;box-sizing:border-box}';
-    document.head.appendChild(st); }
-  var sheet=document.createElement('div'); sheet.id='v27co';
-  sheet.style.cssText='position:fixed;inset:0;z-index:100001;background:rgba(8,20,15,.72);display:flex;align-items:flex-end;justify-content:center';
-  sheet.innerHTML=
-    '<div style="background:#10231a;color:#eafaf2;width:100%;max-width:480px;border-radius:22px 22px 0 0;padding:18px 18px 24px;box-shadow:0 -10px 40px rgba(0,0,0,.5);max-height:90vh;overflow:auto">'+
-      '<div style="display:flex;align-items:center;margin-bottom:12px"><div style="font-family:Sora,sans-serif;font-weight:800;font-size:18px">Order confirm karein</div>'+
-        '<button onclick="v27_closeCheckout()" style="margin-left:auto;background:rgba(255,255,255,.12);border:none;color:#fff;width:36px;height:36px;border-radius:10px;font-size:16px;cursor:pointer">✕</button></div>'+
-      '<div style="font-size:12px;opacity:.7;margin:6px 0 5px">Order type</div>'+
-      '<div style="display:flex;gap:8px;margin-bottom:10px">'+
-        '<button id="v27co-tbtn" onclick="v27_coType(\'table\')" class="v27co-seg">🍽️ Table</button>'+
-        '<button id="v27co-pbtn" onclick="v27_coType(\'parcel\')" class="v27co-seg">📦 Parcel</button></div>'+
-      '<div id="v27co-tablewrap"><input id="v27co-table" class="v27co-in" inputmode="numeric" placeholder="Table number" value="'+esc(menuTable||'')+'"></div>'+
-      '<div style="font-size:12px;opacity:.7;margin:6px 0 5px">Payment</div>'+
-      '<div style="display:flex;gap:8px;margin-bottom:12px" id="v27co-pay">'+
-        ['Cash','UPI','Card'].map(function(p){return '<button onclick="v27_coPay(\''+p+'\')" data-pay="'+p+'" class="v27co-seg">'+p+'</button>';}).join('')+'</div>'+
-      '<div style="font-size:12px;opacity:.7;margin:6px 0 5px">Aapki detail (optional)</div>'+
-      '<input id="v27co-name" class="v27co-in" placeholder="Naam (optional)">'+
-      '<input id="v27co-phone" class="v27co-in" inputmode="tel" placeholder="Mobile number (optional)">'+
-      '<button onclick="v27_menuConfirm()" style="width:100%;background:linear-gradient(135deg,#f07c10,#ff9a38);color:#fff;border:none;padding:15px;border-radius:14px;font-weight:800;font-size:16px;cursor:pointer;margin-top:4px">✅ Send Order · '+money(total)+'</button>'+
-    '</div>';
-  document.body.appendChild(sheet);
-  v27_coType(co.type); v27_coPay(co.pay);
-};
-window.v27_closeCheckout=function(){ var s=document.getElementById('v27co'); if(s) s.parentNode.removeChild(s); };
-window.v27_coType=function(t){ co.type=t; var tb=document.getElementById('v27co-tbtn'),pb=document.getElementById('v27co-pbtn'),tw=document.getElementById('v27co-tablewrap');
-  if(tb)tb.classList.toggle('on',t==='table'); if(pb)pb.classList.toggle('on',t==='parcel'); if(tw)tw.style.display=(t==='table')?'':'none'; };
-window.v27_coPay=function(p){ co.pay=p; Array.prototype.forEach.call(document.querySelectorAll('#v27co-pay [data-pay]'),function(b){ b.classList.toggle('on',b.getAttribute('data-pay')===p); }); };
-window.v27_menuConfirm=function(){
-  if(!menuCart.length){ v27_closeCheckout(); return; }
-  var type=co.type, table=(document.getElementById('v27co-table')||{}).value||menuTable||'';
-  if(type==='table' && !table){ alert('Table number daalein, ya Parcel chunein 🙏'); return; }
-  var name=(document.getElementById('v27co-name')||{}).value||'', phone=(document.getElementById('v27co-phone')||{}).value||'';
-  var total=menuCart.reduce(function(s,c){return s+c.price*c.qty;},0);
-  var o={ id:'MOB'+Date.now(), tableNo:(type==='parcel'?'Parcel':table), orderType:type, items:menuCart.slice(), total:total,
-    staffName:'Customer'+(type==='parcel'?' (Parcel)':(' T'+table)), payMethod:co.pay, custName:name, custPhone:phone,
-    status:'pending', createdAt:Date.now(), source:'customer' };
-  fetch(location.origin+'/api/mobile-orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)})
-    .then(function(r){ if(!r.ok) throw 0; menuCart=[]; renderMenu(); v27_closeCheckout(); try{if(window.v28Tone)window.v28Tone.sent();}catch(e){} alert('✅ Order counter pe bhej diya! Dhanyavaad 🙏'); })
-    .catch(function(){ try{if(window.v28Tone)window.v28Tone.error();}catch(e){} alert('⚠️ Order send nahi hua — counter ko awaaz dein.'); });
-};
-window.v27_callWaiter=function(){
-  var o={id:'CALL'+Date.now(),tableNo:menuTable||'?',items:[],total:0,staffName:'Customer'+(menuTable?(' T'+menuTable):''),status:'pending',source:'call-waiter',note:'📞 Call waiter',createdAt:Date.now()};
-  fetch(location.origin+'/api/mobile-orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)}).then(function(){ alert('📞 Waiter ko bula liya!'); }).catch(function(){ alert('Counter ko awaaz dein 🙏'); });
-};
 
 /* ---- First-run onboarding (admin sets Staff + Mobile PIN + server, once) ---- */
 function maybeOnboard(){
@@ -10140,7 +10035,6 @@ window.v27_onboardDone=function(){ try{localStorage.setItem('ja_v27_onboarded','
 
 /* ---- init ---- */
 function init(){
-  if(isMenuMode){ buildMenuScreen(); return; }
   hideParcel();
   var tries=0; var t=setInterval(function(){ tries++;
     if(localStorage.getItem('ja_v27_onboarded')||tries>90){ clearInterval(t); return; }
@@ -10261,7 +10155,7 @@ function connectEvents(){
   try{ es=new EventSource(origin+'/api/events'); }catch(e){ return; }
   es.addEventListener('order',       function(){ if(isMenuMode) return; if(window.v27ForcePoll) window.v27ForcePoll(); });
   es.addEventListener('order-status',function(){ if(window.v27ForcePoll) window.v27ForcePoll(); });
-  es.addEventListener('menu',        function(){ if(window.v27_menuForceRefresh) window.v27_menuForceRefresh(); });
+  es.addEventListener('menu',        function(){ try{ if(document.getElementById('v27m-grid')){ window.v27RenderMobileMenu&&v27RenderMobileMenu(); window.v27RenderMobileDrawer&&v27RenderMobileDrawer(); } }catch(e){} });
   es.addEventListener('tables',      function(ev){ applyRemoteTables(ev.data); });
   es.addEventListener('config',      function(ev){ try{ if(window.v28ApplyRemoteConfig) window.v28ApplyRemoteConfig(JSON.parse(ev.data)); }catch(e){} });
   es.onerror=function(){ /* EventSource auto-reconnects via retry:3000 */ };
@@ -13996,9 +13890,9 @@ function baseFor(ip){
 }
 
 function drawQRs(ip){
-  var staffEl=document.getElementById('v29a-qr-staff'), custEl=document.getElementById('v29a-qr-cust');
-  if(!staffEl||!custEl) return;
-  staffEl.innerHTML=''; custEl.innerHTML='';
+  var staffEl=document.getElementById('v29a-qr-staff');
+  if(!staffEl) return;
+  staffEl.innerHTML='';
   loadQRLib(function(err){
     if(err||!window.QRCode){
       staffEl.innerHTML='<div style="font-size:11px;color:var(--muted)">QR library load nahi hui (internet chahiye ek baar)</div>';
@@ -14006,12 +13900,10 @@ function drawQRs(ip){
     }
     try{
       new QRCode(staffEl,{text:baseFor(ip)+'?role=mobile',width:150,height:150,correctLevel:QRCode.CorrectLevel.M});
-      new QRCode(custEl,{text:baseFor(ip)+'?role=menu',width:150,height:150,correctLevel:QRCode.CorrectLevel.M});
     }catch(e){}
   });
-  var su=document.getElementById('v29a-url-staff'), cu=document.getElementById('v29a-url-cust');
+  var su=document.getElementById('v29a-url-staff');
   if(su) su.textContent=baseFor(ip)+'?role=mobile';
-  if(cu) cu.textContent=baseFor(ip)+'?role=menu';
 }
 
 function fillIPs(){
@@ -14047,9 +13939,6 @@ function injectCard(){
       '<div style="text-align:center"><div style="font-weight:800;font-size:13px;margin-bottom:6px">🧑‍🍳 Staff Phone (orders)</div>'+
         '<div id="v29a-qr-staff" style="background:#fff;padding:8px;border-radius:10px;display:inline-block"></div>'+
         '<div id="v29a-url-staff" style="font-size:10.5px;color:var(--muted);margin-top:5px;font-family:monospace"></div></div>'+
-      '<div style="text-align:center"><div style="font-weight:800;font-size:13px;margin-bottom:6px">🍽️ Customer Menu</div>'+
-        '<div id="v29a-qr-cust" style="background:#fff;padding:8px;border-radius:10px;display:inline-block"></div>'+
-        '<div id="v29a-url-cust" style="font-size:10.5px;color:var(--muted);margin-top:5px;font-family:monospace"></div></div>'+
     '</div>'+
     '<details style="margin-top:14px"><summary style="cursor:pointer;font-weight:700;color:var(--brand,#077a57)">📌 IP baar-baar badal jaata hai? Static IP set karo (ek baar, 2 minute)</summary>'+
       '<div style="font-size:12px;line-height:1.9;margin-top:8px;color:var(--muted)">'+
@@ -14065,8 +13954,8 @@ function injectCard(){
   if(sel) sel.onchange=function(){ drawQRs(sel.value); };
 }
 window.__v29aRefresh=function(){
-  var s=document.getElementById('v29a-qr-staff'), c=document.getElementById('v29a-qr-cust');
-  if(s) s.innerHTML=''; if(c) c.innerHTML='';
+  var s=document.getElementById('v29a-qr-staff');
+  if(s) s.innerHTML='';
   fillIPs();
 };
 
@@ -16364,7 +16253,7 @@ function autoPrintKOT(order,mo){
     if(typeof v22State!=='undefined'&&v22State&&Array.isArray(v22State.kotOrders)){
       var kot={ id:'KOT'+String(Date.now()).slice(-6), orderId:order.id,
         trainNo:String(mo.tableNo||order.train||''), trainName:'', coach:'', seat:'',
-        items:(order.items||[]).map(function(i){ return {name:i.name,qty:i.qty,note:'',cat:i.cat||'',station:i.station||'kitchen'}; }),
+        items:(order.items||[]).map(function(i){ return {name:i.name,qty:i.qty,note:i.note||'',cat:i.cat||'',station:i.station||'kitchen'}; }),
         status:'pending', ts:Date.now(), startTs:null, readyTs:null,
         orderType:(mo.orderType==='parcel'?'parcel':undefined) };
       v22State.kotOrders.unshift(kot);
