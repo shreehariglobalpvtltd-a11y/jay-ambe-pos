@@ -303,9 +303,14 @@ console.log('✅ Firebase v26 initialized — Jay Ambe POS TABLE');
   .sum-total{display:flex;justify-content:space-between;align-items:center;margin-top:7px;padding-top:9px;border-top:1px solid var(--line)}
   .sum-total .lbl{font-weight:800;font-size:15px}
   .pay-row{display:flex;gap:8px;margin:11px 0 4px}
-  .seg{flex:1;border:1.5px solid var(--line);border-radius:9px;padding:9px;text-align:center;cursor:pointer;font-weight:700;font-size:12.5px;background:#fff}
+  .seg{flex:1;border:1.5px solid var(--line);border-radius:var(--r-sm);padding:9px 6px;text-align:center;cursor:pointer;font-weight:700;font-size:clamp(11px,3vw,12.5px);white-space:nowrap;background:#fff;transition:transform .12s ease}
+  .seg:active{transform:scale(.95)}
   .seg.on{border-color:var(--brand);background:var(--green-bg);color:var(--brand-d)}
-  .cart-actions{display:flex;gap:8px;padding:10px 14px 14px}
+  /* Save & Print always gets its own full-width row (it's the one primary action);
+     the secondary buttons (Save-only/Clear/Discount/Split, appended by later patch
+     layers) wrap onto their own row below instead of overflowing off-screen. */
+  .cart-actions{display:flex;flex-wrap:wrap;gap:8px;padding:10px 14px 14px}
+  .cart-actions #save-print{flex-basis:100%}
 
   .btn{border:none;border-radius:var(--r);padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;
     display:inline-flex;align-items:center;justify-content:center;gap:6px;
@@ -319,7 +324,14 @@ console.log('✅ Firebase v26 initialized — Jay Ambe POS TABLE');
   .btn-amber{background:var(--amber);color:#fff}
   .btn-ghost{background:transparent;color:var(--ink2);border:1.5px solid var(--line2)}.btn-ghost:hover{background:var(--soft);border-color:var(--brand2);color:var(--brand-d);transform:translateY(-1px)}
   
-  .btn-block{flex:1}.btn-sm{padding:6px 12px;font-size:11.5px;border-radius:var(--r-sm)}
+  /* .btn has overflow:hidden (for the ripple effect), which per spec zeroes a flex
+     item's automatic minimum size — without min-width restored here, flex-shrink can
+     squeeze a nowrap button below its text's width and overflow:hidden clips it
+     invisibly (e.g. "Save & Print" rendering as "ave &"). min-width:max-content
+     restores the "never shrink below content" guarantee overflow:hidden removed. */
+  .btn-block{flex:1;min-width:max-content}
+  .cart-actions .btn{font-size:clamp(11px,3vw,13px)}
+  .btn-sm{padding:6px 12px;font-size:11.5px;border-radius:var(--r-sm)}
   .btn-lg{padding:13px 28px;font-size:15px;border-radius:var(--r-md)}
   .sum-total .amt{font-family:'Sora',sans-serif;font-weight:800;font-size:24px;color:var(--brand-d)}
 
