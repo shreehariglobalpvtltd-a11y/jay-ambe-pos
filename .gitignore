@@ -1,4 +1,13 @@
-/src-tauri/target/
+# runtime data — live bills/state written by server.js (kabhi commit mat karo)
+/data/
+
+# local archives / packaged copies
+*.rar
+*.zip
+
+# node
 /node_modules/
-Cargo.lock
+
+# misc
 *.log
+*.tmp
