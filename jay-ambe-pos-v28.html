@@ -470,10 +470,6 @@ console.log('✅ Firebase v26 initialized — Jay Ambe POS TABLE');
   .table-summary .ts-item{font-size:13px;font-weight:700;color:var(--ink2)}
   .table-summary .ts-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:4px}
 
-  /* Section printer badge */
-  .tv-sec-printer{font-size:10px;font-weight:600;color:var(--muted);background:var(--soft);padding:2px 8px;border-radius:8px;margin-left:8px;cursor:pointer}
-  .tv-sec-printer:hover{color:var(--accent);background:var(--accent-bg)}
-
   /* ===== ACTIVE TABLE BAR (billing) ===== */
   .active-train-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:linear-gradient(110deg,#16213e,#0f3460);color:#fff;padding:11px 16px;border-radius:14px;margin-bottom:14px;box-shadow:var(--shadow)}
   .active-train-bar .atb-table{font-size:15px;font-weight:700}
@@ -1047,21 +1043,6 @@ console.log('✅ Firebase v26 initialized — Jay Ambe POS TABLE');
   .qbtn-accent:hover{background:var(--accent-d);border-color:var(--accent-d);box-shadow:0 4px 14px rgba(240,124,16,.35);color:#fff;}
   .qbtn-icon{font-size:15px;line-height:1;}
 
-  /* ── PHASE 11: PRINTER SETTINGS ──────────── */
-  .printer-roles{display:flex;gap:6px;margin-bottom:16px;background:var(--soft);border-radius:var(--r);padding:4px;}
-  .prole-tab{flex:1;padding:8px 12px;border-radius:var(--r-sm);font-size:12px;font-weight:600;
-    background:transparent;color:var(--muted);border:none;cursor:pointer;transition:all var(--dur-fast);}
-  .prole-tab.active{background:var(--card);color:var(--brand-d);box-shadow:var(--shadow-sm);}
-  .printer-config-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-  .pfield.full{grid-column:1/-1;}
-  .pfield label{display:block;font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:5px;
-    text-transform:uppercase;letter-spacing:.04em;}
-  .pfield input,.pfield select,.pfield textarea{width:100%;padding:9px 12px;
-    border:1.5px solid var(--line);border-radius:var(--r-sm);background:var(--card);
-    color:var(--ink);font-size:13px;outline:none;transition:border-color var(--dur-fast);font-family:var(--font-body);}
-  .pfield input:focus,.pfield select:focus,.pfield textarea:focus{border-color:var(--brand2);box-shadow:0 0 0 3px rgba(7,122,87,.1);}
-  .printer-actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
-
   /* ── PHASE 14: ITEM SALES ────────────────── */
   .is-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--r);
     transition:background var(--dur-fast);margin-bottom:2px;}
@@ -1380,7 +1361,7 @@ console.log('✅ Firebase v26 initialized — Jay Ambe POS TABLE');
     <div class="card">
       <div class="card-h">🍽️ Menu items (<span id="m-count">0</span>)</div>
       <div class="search" style="margin-bottom:10px"><span class="ic">🔍</span>
-        <input id="m-search" placeholder="Search menu…" oninput="renderMenuManage()"></div>
+        <input id="m-search" placeholder="Search menu…" oninput="(window._v28p3DebMenu||renderMenuManage)()"></div>
       <div id="menu-list"></div>
     </div>
   </div>
@@ -1763,25 +1744,6 @@ function updateTable(id, updates){
     fbDB.ref('restaurants/'+uid+'/tables/'+id).update(allTables[id]).catch(function(e){ console.warn('FB table sync fail:',e); });
   }
 }
-function loadTablesFromFirebase(){
-  if(!fbAuth.currentUser) return;
-  var uid = fbAuth.currentUser.uid;
-  fbDB.ref('restaurants/'+uid+'/tables').on('value', function(snap){
-    var data = snap.val();
-    if(data && Object.keys(data).length > 0){
-      allTables = data;
-      saveTablesToLS();
-      if(document.querySelector('#pg-tables.active')) renderTableGrid();
-    }
-  });
-}
-function syncAllTablesToFirebase(){
-  if(!fbAuth.currentUser || !Object.keys(allTables).length) return;
-  var uid = fbAuth.currentUser.uid;
-  fbDB.ref('restaurants/'+uid+'/tables').set(allTables).then(function(){
-    toast('✅ Tables synced to Firebase');
-  }).catch(function(e){ toast('❌ Sync error: '+e.message,'error'); });
-}
 function load(k,d){try{return JSON.parse(localStorage.getItem(k))||d;}catch(e){return d;}}
 function save(){
   localStorage.setItem(LS.menu,JSON.stringify(state.menu));
@@ -1818,15 +1780,6 @@ function jaAutoBackup(mod){
   try{ localStorage.setItem(key,JSON.stringify(snaps)); localStorage.setItem(JABK.lastAuto,String(nowt)); }
   catch(e){ /* storage full: drop oldest and retry */ snaps=snaps.slice(-5); try{localStorage.setItem(key,JSON.stringify(snaps));}catch(e2){} }
 }
-function jaGetSnaps(mod){
-  var key=mod==='railway'?JABK.railwaySnap:JABK.parcelSnap;
-  try{ return JSON.parse(localStorage.getItem(key)||'[]'); }catch(e){ return []; }
-}
-// Daily local "fixed" autosave (survives accidental data wipe of main keys)
-function jaDailyAutosave(mod){
-  try{ localStorage.setItem('ja_bk_daily_'+mod+'_'+today(), JSON.stringify(jaSnapshotData(mod))); }catch(e){}
-}
-
 // migrate old ja2_ data once
 (function migrate(){
   if(state.menu.length||state.orders.length) return;
@@ -1864,7 +1817,6 @@ if(state.menu.length===0){
 
 // ======== COMMISSION (disabled) ========
 function commPerUnit(m){ return 0; }
-function netPerUnit(m){ return m.price||0; }
 
 // ======== NAV ========
 function nav(btn){
@@ -2444,7 +2396,6 @@ function renderTableGrid(){
   sectionOrder.forEach(function(sec){
     html+='<div class="tv-section">';
     html+='<div class="tv-section-hdr">'+escHtml(sec);
-    html+='<span class="tv-sec-printer" onclick="event.stopPropagation();openSectionPrinterCfg(\''+escAttr(sec)+'\')" title="Printer config for '+escHtml(sec)+'">🖨️ Printer</span>';
     html+='</div>';
     html+='<div class="tv-section-grid">';
 
@@ -2540,42 +2491,6 @@ function tvDoMove(fromId, toId){
 // Pick Up panel (parcel orders shortcut)
 function openPickUpPanel(){ nav2('parcel'); }
 
-// Section printer config
-var SECTION_PRINTER_KEY='ja_section_printers';
-function loadSectionPrinters(){
-  try{return JSON.parse(localStorage.getItem(SECTION_PRINTER_KEY)||'{}');}catch(e){return {};}
-}
-function saveSectionPrinters(cfg){ localStorage.setItem(SECTION_PRINTER_KEY,JSON.stringify(cfg)); }
-
-function openSectionPrinterCfg(sec){
-  var cfg=loadSectionPrinters();
-  var cur=cfg[sec]||{kot:'',bill:'',kotEnabled:true,billEnabled:true};
-  var html='<h3 style="margin:0 0 12px">🖨️ '+escHtml(sec)+' — Printer Setup</h3>'+
-    '<div class="fld" style="margin-bottom:10px"><label>KOT Printer</label>'+
-    '<input id="spc-kot" value="'+escHtml(cur.kot||'')+'" placeholder="Printer name or leave blank for default" style="width:100%"></div>'+
-    '<div class="fld" style="margin-bottom:10px"><label>Bill Printer</label>'+
-    '<input id="spc-bill" value="'+escHtml(cur.bill||'')+'" placeholder="Printer name or leave blank for default" style="width:100%"></div>'+
-    '<div style="display:flex;gap:16px;margin-bottom:14px">'+
-    '<label style="font-size:13px;font-weight:600;cursor:pointer"><input type="checkbox" id="spc-kot-on" '+(cur.kotEnabled!==false?'checked':'')+' style="margin-right:4px">KOT Enabled</label>'+
-    '<label style="font-size:13px;font-weight:600;cursor:pointer"><input type="checkbox" id="spc-bill-on" '+(cur.billEnabled!==false?'checked':'')+' style="margin-right:4px">Bill Enabled</label>'+
-    '</div>'+
-    '<div class="row" style="gap:8px;justify-content:flex-end">'+
-    '<button class="btn btn-ghost" onclick="closeModal(\'spc-modal\')">Cancel</button>'+
-    '<button class="btn btn-green" onclick="saveSectionPrinterFromModal(\''+escAttr(sec)+'\')">💾 Save</button></div>';
-  showDynamicModal('spc-modal', html);
-}
-function saveSectionPrinterFromModal(sec){
-  var cfg=loadSectionPrinters();
-  cfg[sec]={
-    kot:(document.getElementById('spc-kot').value||'').trim(),
-    bill:(document.getElementById('spc-bill').value||'').trim(),
-    kotEnabled:document.getElementById('spc-kot-on').checked,
-    billEnabled:document.getElementById('spc-bill-on').checked
-  };
-  saveSectionPrinters(cfg);
-  closeModal('spc-modal');
-  toast('✅ Printer config saved for '+sec);
-}
 
 // Section manager — add/rename/delete sections
 function openSectionManager(){
@@ -2913,21 +2828,6 @@ function printTableAll(){
   if(!confirm(tn+' ke '+list.length+' bills ek saath print kare?')) return;
   printMany(list);
 }
-
-// Legacy compatibility shims
-function todayTrainMap(){
-  var t=today(), map={};
-  state.orders.forEach(function(o){
-    if(o.date!==t) return;
-    var tn=(o.train||'').trim(); if(!tn) return;
-    if(!map[tn]) map[tn]={train:tn,name:o.trainName||'',orders:[],total:0,pending:0};
-    if(o.status!=='Cancelled'){ map[tn].orders.push(o); map[tn].total+=o.total;
-      if(o.status==='Pending'||o.status==='Due'||o.status==='Unknown') map[tn].pending++; }
-    if(!map[tn].name && o.trainName) map[tn].name=o.trainName;
-  });
-  return map;
-}
-function refreshActiveTrainBar(){ refreshActiveTableBar(); }
 
 // ═══════════════════════════════════════════════════════════
 // BATCH PRINT (orders page)
@@ -3761,35 +3661,6 @@ else setTimeout(showSyncBanner, 1200);            // no Drive setup → Excel re
 </div>
 
 <!-- ============================================================ -->
-<!--  v22 VARIANT / ADDON MODAL                                  -->
-<!-- ============================================================ -->
-<div class="overlay" id="variant-modal">
-  <div class="modal" style="max-width:400px">
-    <h3 id="variant-modal-title">🍽️ Item Options</h3>
-    <div id="variant-section" style="margin-bottom:14px">
-      <div style="font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Choose Variant</div>
-      <div id="variant-options-list"></div>
-    </div>
-    <div id="addon-section" style="margin-bottom:16px;display:none">
-      <div style="font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Add-ons (Optional)</div>
-      <div id="addon-options-list" style="display:flex;flex-wrap:wrap;gap:6px"></div>
-    </div>
-    <div id="note-section" style="margin-bottom:16px">
-      <div style="font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Special Note (Optional)</div>
-      <input id="variant-note" class="ctrl" style="width:100%" placeholder="No onion, extra spice...">
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-top:1px dashed var(--line);margin-bottom:12px">
-      <span style="font-size:12px;color:var(--muted)">Total for this item:</span>
-      <span style="font-family:var(--font-display);font-weight:800;font-size:20px;color:var(--brand-d)" id="variant-price-total">₹0</span>
-    </div>
-    <div style="display:flex;gap:8px">
-      <button class="btn btn-ghost btn-block" onclick="closeModal('variant-modal')">Cancel</button>
-      <button class="btn btn-brand btn-block btn-lg" onclick="confirmVariantAdd()">➕ Add to Cart</button>
-    </div>
-  </div>
-</div>
-
-<!-- ============================================================ -->
 <!--  v22 BULK EDIT MODAL                                        -->
 <!-- ============================================================ -->
 <div class="overlay" id="bulk-edit-modal">
@@ -4575,41 +4446,6 @@ function sendParcelToAdmin() {
     });
 }
 
-// ── Staff listener — watch status of their own orders ──
-function startStaffOrderListener() {
-  var myUid = (window.fbCurrentUser && window.fbCurrentUser.uid) || 'local-admin';
-  fbDB.ref('parcelQueue').orderByChild('staffUid').equalTo(myUid)
-    .on('value', function(snap) {
-      var orders = [];
-      snap.forEach(function(child){ orders.push(child.val()); });
-      orders.reverse(); // newest first
-      renderMyParcelOrders(orders);
-    });
-}
-
-function renderMyParcelOrders(orders) {
-  var el = document.getElementById('parcel-my-orders');
-  if (!el) return;
-  if (!orders.length) {
-    el.innerHTML = '<div class="empty">Abhi koi parcel order nahi bheja.</div>';
-    return;
-  }
-  var statusColor = { new:'var(--accent)', accepted:'var(--blue)', preparing:'var(--amber)', ready:'var(--green)', completed:'#bbb' };
-  var statusLabel = { new:'🆕 Bheja gaya', accepted:'✅ Accept hua', preparing:'👨‍🍳 Ban raha hai', ready:'🎉 Ready!', completed:'✅ Complete' };
-  el.innerHTML = orders.slice(0, 20).map(function(o) {
-    var sc = statusColor[o.status] || 'var(--accent)';
-    var sl = statusLabel[o.status] || o.status;
-    return '<div class="parcel-order-card parcel-status-' + o.status + '">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
-        '<span style="font-family:\'Sora\',sans-serif;font-weight:800">' + escHtml(o.custName) + '</span>' +
-        '<span style="background:' + sc + ';color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:800">' + sl + '</span>' +
-      '</div>' +
-      '<div style="font-size:12px;color:var(--muted)">' + o.items.map(function(i){ return escHtml(i.name)+' ×'+i.qty; }).join(', ') + '</div>' +
-      '<div style="font-family:\'Sora\',sans-serif;font-weight:800;font-size:17px;color:var(--brand-d);margin-top:6px">' + money(o.total) + '</div>' +
-    '</div>';
-  }).join('');
-}
-
 // ═══════════════════════════════════════════════════════════
 // ADMIN — PARCEL QUEUE LISTENER (realtime incoming orders)
 // ═══════════════════════════════════════════════════════════
@@ -4768,48 +4604,6 @@ onShow = function(pg) {
 console.log('✅ Firebase v20 module loaded — Jay Ambe POS Cloud Edition');
 </script>
 
-<!-- ── PRINTER SETTINGS MODULE (Phase 11) ── -->
-<div id="printer-section" class="card" style="margin-top:14px">
-  <div class="card-h">🖨️ Printer Configuration</div>
-  <div class="printer-roles">
-    <button class="prole-tab active" onclick="selectPrinterRole('billing',this)">💳 Billing</button>
-    <button class="prole-tab" onclick="selectPrinterRole('kitchen',this)">🍳 KOT / Kitchen</button>
-    <button class="prole-tab" onclick="selectPrinterRole('parcel',this)">📦 Parcel</button>
-  </div>
-  <div class="printer-config-grid" id="printer-config-grid">
-    <div class="pfield full"><label>Printer Name / Label</label>
-      <input type="text" id="pr-name" placeholder="e.g. Counter Billing Printer"></div>
-    <div class="pfield"><label>Connection Type</label>
-      <select id="pr-type" onchange="printerTypeToggle()">
-        <option value="browser">🌐 Browser Print (default)</option>
-        <option value="network">📡 WiFi / LAN (IP)</option>
-        <option value="usb">🔌 USB Thermal</option>
-        <option value="bluetooth">📶 Bluetooth</option>
-      </select></div>
-    <div class="pfield"><label>Paper Width</label>
-      <select id="pr-paper">
-        <option value="80">80mm — Standard thermal</option>
-        <option value="58">58mm — Small/pocket</option>
-        <option value="a4">A4 — Browser print</option>
-      </select></div>
-    <div class="pfield" id="pr-ip-field" style="display:none"><label>IP Address</label>
-      <input type="text" id="pr-ip" placeholder="192.168.1.100"></div>
-    <div class="pfield" id="pr-port-field" style="display:none"><label>Port</label>
-      <input type="number" id="pr-port" placeholder="9100" value="9100"></div>
-    <div class="pfield full"><label>Bill Header</label>
-      <textarea id="pr-header" rows="2" placeholder="Tel: 9999999999 | www.jayambefastfood.com"></textarea></div>
-    <div class="pfield full"><label>Bill Footer / Thank-you Message</label>
-      <textarea id="pr-footer" rows="2" placeholder="Dhanyavaad! Phir aana 🙏"></textarea></div>
-  </div>
-  <div class="printer-actions">
-    <button class="btn btn-ghost btn-sm" onclick="testPrint()">🖨️ Test Print</button>
-    <button class="btn btn-brand" onclick="savePrinterConfig()">💾 Save</button>
-    <button class="btn btn-red btn-sm" onclick="resetPrinterConfig()">🗑️ Reset</button>
-  </div>
-  <div id="pr-test-msg" style="margin-top:8px;font-size:12px;font-weight:600"></div>
-  <div id="saved-printers-list" style="margin-top:16px"></div>
-</div>
-
 <script>
 // ═══════════════════════════════════════════
 // v21 JS UPGRADES
@@ -4894,30 +4688,6 @@ nav = function(btn) {
   _origNav(btn);
 };
 
-// ── ANIMATED COUNTER (Phase 8D) ──────────
-function animateCounter(el, targetVal, prefix, suffix) {
-  if (!el) return;
-  prefix = prefix || ''; suffix = suffix || '';
-  var start = 0, dur = 700, t0 = performance.now();
-  function step(now) {
-    var p = Math.min((now - t0) / dur, 1);
-    var ease = 1 - Math.pow(1 - p, 3);
-    el.textContent = prefix + Math.floor(start + (targetVal - start) * ease) + suffix;
-    if (p < 1) requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
-}
-
-// ── DEBOUNCE (Phase 15) ──────────────────
-function debounce(fn, ms) {
-  var t;
-  return function() {
-    var args = arguments, ctx = this;
-    clearTimeout(t);
-    t = setTimeout(function(){ fn.apply(ctx, args); }, ms);
-  };
-}
-
 // ── PASSIVE LISTENERS (Phase 15) ─────────
 document.addEventListener('touchstart', function(){}, { passive: true });
 document.addEventListener('touchmove',  function(){}, { passive: true });
@@ -4932,103 +4702,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
-
-// ── PRINTER MODULE (Phase 11) ─────────────
-var _printerRole = 'billing';
-var PAPER_WIDTHS = { '80': 48, '58': 32, 'a4': 80 };
-
-function selectPrinterRole(role, btn) {
-  _printerRole = role;
-  document.querySelectorAll('.prole-tab').forEach(function(b){ b.classList.remove('active'); });
-  if (btn) btn.classList.add('active');
-  loadPrinterConfig(role);
-}
-
-function printerTypeToggle() {
-  var type = document.getElementById('pr-type') && document.getElementById('pr-type').value;
-  var show = type === 'network';
-  ['pr-ip-field','pr-port-field'].forEach(function(id){
-    var el = document.getElementById(id); if (el) el.style.display = show ? 'block' : 'none';
-  });
-}
-
-function loadPrinterConfig(role) {
-  var all = JSON.parse(localStorage.getItem('ja_printers') || '{}');
-  var cfg = all[role] || {};
-  function v(id, val) { var e = document.getElementById(id); if (e) e.value = val || ''; }
-  v('pr-name',   cfg.name);
-  v('pr-type',   cfg.type   || 'browser');
-  v('pr-paper',  cfg.paper  || '80');
-  v('pr-ip',     cfg.ip);
-  v('pr-port',   cfg.port   || '9100');
-  v('pr-header', cfg.header);
-  v('pr-footer', cfg.footer || 'Dhanyavaad! Phir aana 🙏');
-  printerTypeToggle();
-  renderSavedPrinters();
-}
-
-function savePrinterConfig() {
-  var all = JSON.parse(localStorage.getItem('ja_printers') || '{}');
-  function g(id) { var e = document.getElementById(id); return e ? e.value : ''; }
-  var paper = g('pr-paper');
-  all[_printerRole] = { name:g('pr-name'), type:g('pr-type'), paper:paper,
-    width:PAPER_WIDTHS[paper]||48, ip:g('pr-ip'), port:g('pr-port')||'9100',
-    header:g('pr-header'), footer:g('pr-footer') };
-  localStorage.setItem('ja_printers', JSON.stringify(all));
-  renderSavedPrinters();
-  toast('✅ Printer config saved!', 'success');
-}
-
-function resetPrinterConfig() {
-  if (!confirm('Is role ka printer config delete kare?')) return;
-  var all = JSON.parse(localStorage.getItem('ja_printers') || '{}');
-  delete all[_printerRole];
-  localStorage.setItem('ja_printers', JSON.stringify(all));
-  loadPrinterConfig(_printerRole);
-  toast('🗑️ Reset done', 'info');
-}
-
-function renderSavedPrinters() {
-  var all   = JSON.parse(localStorage.getItem('ja_printers') || '{}');
-  var el    = document.getElementById('saved-printers-list');
-  if (!el) return;
-  var labels = { billing:'💳 Billing', kitchen:'🍳 KOT', parcel:'📦 Parcel' };
-  var keys   = Object.keys(all);
-  if (!keys.length) { el.innerHTML = '<div class="empty">Koi printer configured nahi hai</div>'; return; }
-  el.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Configured Printers</div>' +
-    keys.map(function(r) {
-      var c = all[r];
-      return '<div class="mrow" style="gap:8px"><span style="flex:1;font-weight:700;font-size:13px">'+(labels[r]||r)+'</span><span class="mc">'+c.type+'</span>'+(c.ip?'<span style="font-size:11px;color:var(--muted)">'+c.ip+':'+c.port+'</span>':'')+'<span style="font-size:11px;color:var(--brand-d);font-weight:700">'+(c.paper||'80')+'mm</span></div>';
-    }).join('');
-}
-
-function testPrint() {
-  var all = JSON.parse(localStorage.getItem('ja_printers') || '{}');
-  var cfg = all[_printerRole] || {};
-  var msg = document.getElementById('pr-test-msg');
-  var type = cfg.type || 'browser';
-  if (type === 'browser') {
-    var w = window.open('','_blank','width=380,height=500');
-    if (!w) { toast('⚠️ Popup blocker ne rokha!', 'warn'); return; }
-    w.document.write('<html><body><pre style="font-family:monospace;font-size:12px;padding:16px">================================\n      JAY AMBE FAST FOOD\n      PRINTER TEST\n================================\nRole: '+_printerRole.toUpperCase()+'\nPaper: '+(cfg.paper||'80')+'mm\nDate: '+new Date().toLocaleString('en-IN')+'\n================================\n        TEST OK ✅\n================================\n</pre></body></html>');
-    w.print(); w.close();
-    if (msg) msg.innerHTML = '<span style="color:var(--s-green)">✅ Browser print sent successfully</span>';
-  } else if (type === 'network') {
-    if (msg) msg.innerHTML = '<span style="color:var(--s-amber)">⚠️ Network print: Local proxy server chahiye. IP: '+(cfg.ip||'Not set')+':'+(cfg.port||'9100')+'</span>';
-  } else {
-    if (msg) msg.innerHTML = '<span style="color:var(--s-blue)">ℹ️ '+type+' print: Device test karo.</span>';
-  }
-}
-
-// ── PRINTER SECTION HTML INJECTION ───────
-(function() {
-  // Find settings section and inject printer module if not already there
-  var settingsPage = document.getElementById('pg-cloud') || document.getElementById('pg-reports');
-  if (!settingsPage) return;
-  // Inject into existing admin settings area if available
-  var adminSettingsRow = document.querySelector('.card-h');
-  // Will be rendered when admin visits settings
-})();
 
 // ═══════════════════════════════════════════════════════════
 // v22 ULTIMATE — ALL NEW FEATURES
@@ -5110,11 +4783,10 @@ function v22Toast(msg, type, dur) {
   }, dur);
 }
 
-// Override old toast too for consistency
-var _oldToast = window.toast;
+// Route all toast() calls through the single v22Toast stack — previously this
+// called v22Toast AND the older bottom-right popup, showing two toasts per call.
 window.toast = function(msg, type, dur) {
   v22Toast(msg, type || 'info', dur || 3000);
-  if (_oldToast) _oldToast(msg, type, dur);
 };
 
 // ═══════════════════════════════════════════════════════════
@@ -5184,16 +4856,8 @@ var COMMON_TRAINS = [
   {no:'12490',name:'Bikaner Express',route:'BKN-ADI',type:'SuperFast'}
 ];
 
-// Commission rate by train type
-var TRAIN_COMM_RATE = { Mail:12, SuperFast:15, Shatabdi:18, Express:13, Passenger:8, Local:5 };
-
 function getTrainInfo(no) {
   return COMMON_TRAINS.find(function(t){ return t.no === String(no).trim(); }) || null;
-}
-
-function getTrainCommRate(no) {
-  var t = getTrainInfo(no);
-  return t ? (TRAIN_COMM_RATE[t.type] || 12) : 12;
 }
 
 // Train search autocomplete
@@ -5296,107 +4960,6 @@ window.renderItems = function() {
 };
 
 // ═══════════════════════════════════════════════════════════
-// v22 VARIANT / ADDON SYSTEM
-// ═══════════════════════════════════════════════════════════
-function openVariantModal(menuId) {
-  var m = state.menu.find(function(x){ return x.id === menuId; });
-  if (!m) return;
-  var variants = m.variants || [];
-  var addons = m.addons || [];
-  if (!variants.length && !addons.length) {
-    // No variants — add directly
-    addToCart(menuId);
-    return;
-  }
-  v22State.variantPending = { menuId: menuId, item: m, variant: null, addons: [] };
-  document.getElementById('variant-modal-title').textContent = '🍽️ ' + m.name;
-  var vList = document.getElementById('variant-options-list');
-  var vsect = document.getElementById('variant-section');
-  if (variants.length) {
-    vsect.style.display = '';
-    vList.innerHTML = variants.map(function(v, i) {
-      return '<div class="variant-option' + (i===0?' selected':'') + '" onclick="selectVariant(' + i + ',this)">' +
-        '<span class="variant-name">' + escHtml(v.name) + '</span>' +
-        '<span class="variant-price">₹' + ((m.price || 0) + (v.addon || 0)) + '</span>' +
-        '</div>';
-    }).join('');
-    v22State.variantPending.variant = variants[0];
-  } else {
-    vsect.style.display = 'none';
-  }
-  var aList = document.getElementById('addon-options-list');
-  var asect = document.getElementById('addon-section');
-  if (addons.length) {
-    asect.style.display = '';
-    aList.innerHTML = addons.map(function(a, i) {
-      return '<div class="addon-chip" onclick="toggleAddon(' + i + ',this)">' +
-        escHtml(a.name) + ' <span class="addon-price">+₹' + (a.price||0) + '</span></div>';
-    }).join('');
-  } else {
-    asect.style.display = 'none';
-  }
-  document.getElementById('variant-note').value = '';
-  updateVariantPrice();
-  document.getElementById('variant-modal').classList.add('open');
-}
-
-function selectVariant(idx, el) {
-  document.querySelectorAll('#variant-options-list .variant-option').forEach(function(e){ e.classList.remove('selected'); });
-  el.classList.add('selected');
-  v22State.variantPending.variant = v22State.variantPending.item.variants[idx];
-  updateVariantPrice();
-}
-
-function toggleAddon(idx, el) {
-  el.classList.toggle('selected');
-  var a = v22State.variantPending.item.addons[idx];
-  var ai = v22State.variantPending.addons.indexOf(a);
-  if (ai >= 0) v22State.variantPending.addons.splice(ai, 1);
-  else v22State.variantPending.addons.push(a);
-  updateVariantPrice();
-}
-
-function updateVariantPrice() {
-  var p = v22State.variantPending;
-  if (!p) return;
-  var base = p.item.price || 0;
-  var vAdd = p.variant ? (p.variant.addon || 0) : 0;
-  var aSum = p.addons.reduce(function(s,a){ return s + (a.price||0); }, 0);
-  document.getElementById('variant-price-total').textContent = '₹' + (base + vAdd + aSum);
-}
-
-function confirmVariantAdd() {
-  var p = v22State.variantPending;
-  if (!p) return;
-  var base = p.item.price || 0;
-  var vAdd = p.variant ? (p.variant.addon || 0) : 0;
-  var aSum = p.addons.reduce(function(s,a){ return s + (a.price||0); }, 0);
-  var finalPrice = base + vAdd + aSum;
-  var label = p.item.name + (p.variant ? ' (' + p.variant.name + ')' : '') +
-    (p.addons.length ? ' +' + p.addons.map(function(a){ return a.name; }).join('+') : '');
-  var note = (document.getElementById('variant-note') || {}).value || '';
-  var existing = state.cart.find(function(x){ return x.id === p.menuId && x.variantKey === (p.variant ? p.variant.name : ''); });
-  if (existing && !note && !p.addons.length) {
-    existing.qty++;
-  } else {
-    state.cart.push({
-      id: p.menuId,
-      name: label,
-      price: finalPrice,
-      qty: 1,
-      comm: commPerUnit(p.item),
-      note: note,
-      variantKey: p.variant ? p.variant.name : ''
-    });
-  }
-  closeModal('variant-modal');
-  v22State.variantPending = null;
-  renderItems();
-  renderCart();
-  v22Toast('➕ Added: ' + label, 'success', 1800);
-}
-
-// ═══════════════════════════════════════════════════════════
 // v22 SPLIT PAYMENT SYSTEM
 // ═══════════════════════════════════════════════════════════
 function initSplitPayment() {
@@ -5429,13 +4992,6 @@ function updateSplitBalance() {
 function setCartItemNote(id, note) {
   var c = state.cart.find(function(x){ return x.id === id; });
   if (c) { c.note = note; renderCart(); }
-}
-
-function openCartNote(id) {
-  var c = state.cart.find(function(x){ return x.id === id; });
-  var note = c ? (c.note || '') : '';
-  var n = prompt('Note for ' + (c ? c.name : id) + ':', note);
-  if (n !== null) setCartItemNote(id, n.trim());
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -6240,7 +5796,7 @@ document.addEventListener('keydown', function(e) {
     btn.innerHTML = '🎟️ <span>KOT</span>' + (pending > 0 ? ' <span style="background:var(--accent);color:#fff;font-size:10px;font-weight:800;padding:1px 6px;border-radius:10px">' + pending + '</span>' : '');
   }
   updateKotNavBadge();
-  setInterval(updateKotNavBadge, 10000);
+  setInterval(updateKotNavBadge, 20000);
 
   v22Toast('🚀 Jay Ambe POS v22 ULTIMATE — ' + state.menu.length + ' items, ' + COMMON_TRAINS.length + ' trains loaded!', 'success', 4000);
 })();
@@ -6563,10 +6119,6 @@ function trackRecentItem(id) {
   localStorage.setItem('ja_v22_recent', JSON.stringify(_recentItemIds));
 }
 
-function getShortCode(name) {
-  return name.split(' ').map(function(w){ return w[0]||''; }).join('').toUpperCase();
-}
-
 // Patch addToCart to track recent + log
 var _origAddToCart = window.addToCart;
 window.addToCart = function(id) {
@@ -6593,28 +6145,6 @@ window.setCat = function(c) {
   if (!searchInp) return;
   searchInp.setAttribute('placeholder', '🔍 Name, shortcode (PB=PavBhaji)...');
 })();
-
-// ═══════════════════════════════════════════════════════════
-// v22 COMMISSION REPORT — Monthly Settlement
-// ═══════════════════════════════════════════════════════════
-function buildMonthlyCommReport() {
-  var now = new Date();
-  var os = state.orders.filter(function(o) {
-    var d = new Date(o.ts||Date.parse(o.date));
-    return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear() && o.status!=='Cancelled';
-  });
-  var trainMap = {};
-  os.forEach(function(o) {
-    var tn = o.train||o.trainNo||'Walk-in';
-    if (!trainMap[tn]) { var info=getTrainInfo(tn)||{}; trainMap[tn]={name:info.name||'',orders:0,rev:0,comm:0,type:info.type||''}; }
-    trainMap[tn].orders++;
-    trainMap[tn].rev += o.total;
-  });
-  return Object.keys(trainMap).map(function(no) {
-    var d=trainMap[no];
-    return { no:no, name:d.name, orders:d.orders, rev:d.rev, comm:d.comm, net:d.rev-d.comm, type:d.type };
-  }).sort(function(a,b){ return b.rev-a.rev; });
-}
 
 // ═══════════════════════════════════════════════════════════
 // v22 PRINT RECEIPT ENHANCEMENTS — GST on bill
@@ -7186,9 +6716,6 @@ EXTRA_TRAINS.forEach(function(t) {
   if (!exists) COMMON_TRAINS.push(t);
 });
 
-// Add Duronto to commission rates
-TRAIN_COMM_RATE.Duronto = 20;
-
 // ═══════════════════════════════════════════════════════════
 // v22 ULTIMATE — ENHANCED MENU ADMIN WITH GST + VARIANTS
 // ═══════════════════════════════════════════════════════════
@@ -7369,48 +6896,6 @@ document.addEventListener('keydown', function(e) {
 })();
 
 // ═══════════════════════════════════════════════════════════
-// v22 ULTIMATE — ENHANCED PRINTER TEST WITH PREVIEW
-// ═══════════════════════════════════════════════════════════
-function v22TestPrint() {
-  var bs = getBillSettings ? getBillSettings() : {};
-  var header = bs.name || 'JAY AMBE FAST FOOD & RESTAURANT';
-  var addr = bs.addr || 'Mehsana, Gujarat';
-  var now = new Date().toLocaleString('en-IN');
-  var w = window.open('', '_blank', 'width=380,height=600');
-  if (!w) { v22Toast('⚠️ Popup blocked!', 'warn'); return; }
-  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><style>' +
-    '@page{margin:0;size:80mm auto}' +
-    'body{margin:0;padding:3mm;width:80mm;font-family:"Courier New",monospace;font-size:12pt;font-weight:900;color:#000}' +
-    '.c{text-align:center}hr{border:none;border-top:2px dashed #000;margin:3mm 0}' +
-    '</style></head><body>' +
-    '<div class="c" style="font-size:14pt;font-weight:bold">' + escHtml(header) + '</div>' +
-    '<div class="c" style="font-size:10pt;margin-top:1mm">' + escHtml(addr) + '</div>' +
-    '<hr>' +
-    '<div class="c" style="font-size:16pt;margin:3mm 0">🖨️ TEST PRINT</div>' +
-    '<hr>' +
-    '<div style="font-size:11pt">' +
-    'Version: v22 ULTIMATE<br>' +
-    'Date: ' + now + '<br>' +
-    'Paper: 80mm Thermal<br>' +
-    'Status: ✅ Working<br>' +
-    'Menu Items: ' + state.menu.length + '<br>' +
-    'Total Orders: ' + state.orders.length +
-    '</div>' +
-    '<hr>' +
-    '<div class="c" style="font-size:11pt">' +
-    '━━━━━━━━━━━━━━━━━━━━━━<br>' +
-    'PRINTER TEST SUCCESSFUL<br>' +
-    '━━━━━━━━━━━━━━━━━━━━━━<br>' +
-    'Jai Ambe Mata Ki! 🙏' +
-    '</div>' +
-    '</body></html>');
-  w.document.close();
-  setTimeout(function() { w.focus(); w.print(); }, 400);
-  v22Toast('🖨️ Test print sent!', 'success');
-  logV22Activity('Test Print', 'Printer test at ' + now, '🖨️');
-}
-
-// ═══════════════════════════════════════════════════════════
 // v22 ULTIMATE — SMOOTH CSS TRANSITIONS FOR DARK MODE
 // ═══════════════════════════════════════════════════════════
 (function addDarkModeTransitions() {
@@ -7510,30 +6995,6 @@ function v22ExportAll() {
   }, 600);
 })();
 
-// ═══════════════════════════════════════════════════════════
-// v22 ULTIMATE — ORDER SUMMARY NOTIFICATION SOUND
-// ═══════════════════════════════════════════════════════════
-function v22PlaySound(type) {
-  try {
-    var ctx = new (window.AudioContext || window.webkitAudioContext)();
-    var osc = ctx.createOscillator();
-    var gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    if (type === 'success') {
-      osc.frequency.value = 800;
-      gain.gain.value = 0.1;
-      osc.start();
-      setTimeout(function(){ osc.frequency.value = 1200; }, 100);
-      setTimeout(function(){ osc.stop(); ctx.close(); }, 200);
-    } else if (type === 'error') {
-      osc.frequency.value = 300;
-      gain.gain.value = 0.1;
-      osc.start();
-      setTimeout(function(){ osc.stop(); ctx.close(); }, 300);
-    }
-  } catch(e) { /* Audio not available */ }
-}
 
 // ═══════════════════════════════════════════════════════════
 // v22 ULTIMATE — PRODUCTION READY INIT
@@ -7653,47 +7114,6 @@ console.log('');
       <button class="btn btn-brand btn-sm" onclick="v23SavePrint();v23SaveBill();v23Toast('✅ Settings saved!')">💾 Save All</button>
     </div>
 
-    <!-- PRINTER CONFIG -->
-    <div class="card">
-      <div class="card-h">🖨️ Printer Configuration</div>
-      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
-        <button class="btn btn-sm v23-ptab active" onclick="v23SelectPRole('billing',this)">💳 Bill Counter</button>
-        <button class="btn btn-sm v23-ptab" onclick="v23SelectPRole('kitchen',this)">🍳 KOT Kitchen</button>
-        <button class="btn btn-sm v23-ptab" onclick="v23SelectPRole('bar',this)">🍺 KOT Bar</button>
-        <button class="btn btn-sm v23-ptab" onclick="v23SelectPRole('parcel',this)">📦 Parcel</button>
-        <button class="btn btn-sm v23-ptab" onclick="v23SelectPRole('report',this)">📑 Report</button>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-        <div class="fld" style="grid-column:1/-1"><label>Printer Name / Label</label>
-          <input id="v23-pr-name" placeholder="Counter Billing Printer"></div>
-        <div class="fld"><label>Connection Type</label>
-          <select id="v23-pr-type" onchange="v23PrinterTypeToggle()">
-            <option value="browser">🌐 Browser Print</option>
-            <option value="os">🖥️ OS Printer</option>
-            <option value="network">📡 Network IP</option>
-          </select></div>
-        <div class="fld"><label>Paper Width</label>
-          <select id="v23-pr-paper">
-            <option value="80">80mm (4 inch)</option>
-            <option value="58">58mm</option>
-          </select></div>
-        <div class="fld" id="v23-pr-os-wrap" style="grid-column:1/-1;display:none">
-          <label>OS Printer <button class="btn btn-ghost btn-sm" onclick="v23RefreshOSPrinters()" style="font-size:10px;padding:2px 8px;margin-left:8px">🔄 Refresh</button></label>
-          <select id="v23-pr-os-select"><option value="">-- Detect printers --</option></select>
-        </div>
-        <div class="fld" id="v23-pr-ip-wrap" style="grid-column:1/-1;display:none">
-          <label>Printer IP Address</label>
-          <input id="v23-pr-ip" placeholder="192.168.1.100" inputmode="url">
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn btn-brand btn-sm" onclick="v23SavePrinter()">💾 Save</button>
-        <button class="btn btn-ghost btn-sm" onclick="v23TestPrint()">🖨️ Test Print</button>
-        <button class="btn btn-ghost btn-sm" onclick="v23DirectPrint()">⚡ Direct Print</button>
-      </div>
-      <div id="v23-printers-list" style="margin-top:12px"></div>
-    </div>
-
     <!-- OPERATIONS -->
     <div class="card">
       <div class="card-h">⚙️ Operations</div>
@@ -7750,8 +7170,6 @@ console.log('');
 
 <style>
 /* v23 SETTINGS PAGE */
-.v23-ptab{background:var(--soft)!important;color:var(--muted)!important;border:1.5px solid var(--line)!important}
-.v23-ptab.active{background:var(--brand)!important;color:#fff!important;border-color:var(--brand)!important}
 
 /* OPERATIONS GRID */
 .ops-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
@@ -7774,9 +7192,8 @@ console.log('');
 .v23-theme-dot{width:18px;height:18px;border-radius:50%;border:1px solid rgba(0,0,0,.1)}
 .v23-theme-name{font-size:11px;font-weight:700}
 
-/* v23 OVERRIDE — HIDE offline banners and old printer section */
+/* v23 OVERRIDE — HIDE offline banners */
 #offline-banner,#v22-offline-bar,#syncbanner{display:none!important}
-#printer-section{display:none!important}
 
 /* v23 MULTI-COLOR THEME SUPPORT */
 [data-color="orange"]{--brand:#e05b00;--brand2:#f07c10;--brand3:#ff9a38;--brand-d:#c04e00;--brand-dk:#8a3800;--brand-lg:#fff4e8;--brand-llg:#fff9f2}
@@ -7824,12 +7241,8 @@ console.log('');
   });
 })();
 
-// ── 2) HIDE OLD PRINTER SECTION + ADD SETTINGS NAV ──────
+// ── 2) ADD SETTINGS NAV ──────────────────────────────────
 (function v23SetupSettings(){
-  // Hide old printer section in cloud page
-  var oldPrinter=document.getElementById('printer-section');
-  if(oldPrinter) oldPrinter.style.display='none';
-
   // Add ⚙️ Settings button to nav if not present
   setTimeout(function(){
     var nav=document.querySelector('.nav');
@@ -7892,8 +7305,6 @@ function v23LoadSettings(){
     var isDark=document.documentElement.getAttribute('data-theme')==='dark';
     darkBtn.textContent=isDark?'☀️ Light':'🌙 Dark';
   }
-  // Printers
-  v23RenderPrinters();
 }
 
 function v23SaveBill(){
@@ -7937,99 +7348,6 @@ function v23SavePrint(){
   root.style.setProperty('--ptot',ps.total||'20pt');
 }
 
-function v23ToggleHideComm(){
-  var hc=localStorage.getItem('v23_hide_comm')==='1';
-  localStorage.setItem('v23_hide_comm',hc?'0':'1');
-  v23LoadSettings();
-  v23Toast(hc?'Commission will show on bill':'Commission HIDDEN from customer bill');
-}
-
-// ── v23 PRINTER CONFIG ──────────────────────────────────
-var _v23PRole='billing';
-function v23SelectPRole(role,btn){
-  _v23PRole=role;
-  document.querySelectorAll('.v23-ptab').forEach(function(b){b.classList.remove('active');});
-  if(btn)btn.classList.add('active');
-  var all=JSON.parse(localStorage.getItem('ja_printers')||'{}');
-  var c=all[role]||{};
-  var f=function(id,v){var e=document.getElementById(id);if(e)e.value=v||'';};
-  f('v23-pr-name',c.name);f('v23-pr-type',c.type||'browser');f('v23-pr-paper',c.paper||'80');
-  f('v23-pr-ip',c.ip||'');f('v23-pr-os-select',c.osPrinter||'');
-  v23PrinterTypeToggle();
-}
-
-function v23SavePrinter(){
-  var all=JSON.parse(localStorage.getItem('ja_printers')||'{}');
-  var g=function(id){var e=document.getElementById(id);return e?e.value:'';};
-  var ip=g('v23-pr-ip');var osP=g('v23-pr-os-select');
-  all[_v23PRole]={name:g('v23-pr-name'),type:g('v23-pr-type'),paper:g('v23-pr-paper'),width:g('v23-pr-paper')==='58'?32:48,ip:ip,osPrinter:osP};
-  localStorage.setItem('ja_printers',JSON.stringify(all));
-  v23RenderPrinters();
-  v23Toast('✅ Printer saved!');
-}
-
-function v23TestPrint(){
-  var bs=typeof getBillSettings==='function'?getBillSettings():{};
-  var w=window.open('','_blank','width=360,height=500');
-  if(!w){v23Toast('⚠️ Popup blocked!','warn');return;}
-  w.document.write('<html><body style="font-family:monospace;font-size:12px;padding:16px;width:80mm"><pre>================================\n  '+((bs.name||'JAY AMBE FAST FOOD').substring(0,28))+'\n  PRINTER TEST ✅\n================================\nRole: '+_v23PRole.toUpperCase()+'\nDate: '+new Date().toLocaleString('en-IN')+'\n================================\n    TEST OK — Jai Ambe! 🙏\n================================</pre></body></html>');
-  w.print();
-  v23Toast('🖨️ Test sent!');
-}
-
-function v23RenderPrinters(){
-  var all=JSON.parse(localStorage.getItem('ja_printers')||'{}');
-  var el=document.getElementById('v23-printers-list');if(!el)return;
-  var labels={billing:'💳 Bill Counter',kitchen:'🍳 KOT Kitchen',bar:'🍺 KOT Bar',parcel:'📦 Parcel',report:'📑 Report'};
-  var keys=Object.keys(all);
-  if(!keys.length){el.innerHTML='<div style="color:var(--muted);font-size:12px;padding:8px 0">Koi printer set nahi hai</div>';return;}
-  el.innerHTML=keys.map(function(k){
-    var c=all[k];
-    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:12px">'+
-      '<span style="font-weight:700">'+(labels[k]||k)+'</span>'+
-      '<span style="color:var(--muted);flex:1">'+(c.name||'—')+'</span>'+
-      '<span style="color:var(--brand-d);font-weight:700">'+(c.paper||'80')+'mm</span></div>';
-  }).join('');
-}
-
-// ── PRINTER TYPE TOGGLE (show/hide IP and OS fields) ────
-function v23PrinterTypeToggle(){
-  var t=(document.getElementById('v23-pr-type')||{}).value||'browser';
-  var ipW=document.getElementById('v23-pr-ip-wrap');
-  var osW=document.getElementById('v23-pr-os-wrap');
-  if(ipW) ipW.style.display=t==='network'?'':'none';
-  if(osW) osW.style.display=t==='os'?'':'none';
-}
-
-// ── OS PRINTER DETECTION ─────────────────────────────────
-function v23RefreshOSPrinters(){
-  var sel=document.getElementById('v23-pr-os-select');
-  if(!sel) return;
-  sel.innerHTML='<option value="">Loading...</option>';
-  if(window.__TAURI__&&window.__TAURI__.invoke){
-    window.__TAURI__.invoke('list_printers').then(function(r){
-      var printers=JSON.parse(r||'[]');
-      sel.innerHTML='<option value="">-- Select printer --</option>'+
-        printers.map(function(p){return '<option value="'+p+'">'+p+'</option>';}).join('');
-      if(!printers.length) sel.innerHTML='<option value="">No printers found</option>';
-    }).catch(function(){sel.innerHTML='<option value="">Detection failed</option>';});
-  } else {
-    sel.innerHTML='<option value="">OS detection only in Desktop app</option>';
-  }
-}
-
-// ── DIRECT PRINT (skip dialog) ──────────────────────────
-function v23DirectPrint(){
-  var all=JSON.parse(localStorage.getItem('ja_printers')||'{}');
-  var c=all[_v23PRole]||{};
-  if(c.type==='os'&&c.osPrinter&&window.__TAURI__&&window.__TAURI__.invoke){
-    window.__TAURI__.invoke('raw_print',{printer:c.osPrinter,content:'TEST PRINT: '+_v23PRole+' — '+(new Date().toLocaleString('en-IN'))});
-    v23Toast('⚡ Direct print sent to '+c.osPrinter);
-  } else {
-    v23Toast('⚠️ Direct print sirf Desktop OS printer pe — browser me browser print use karo','warn');
-  }
-}
-
 // ── OPERATIONS TOGGLES ───────────────────────────────────
 function opsLoadToggles(){
   var cfg=JSON.parse(localStorage.getItem('ja_ops_billing')||'{}');
@@ -8059,7 +7377,7 @@ function v23OpenBackupPanel(){
 }
 
 // Init new settings
-setTimeout(function(){ opsLoadToggles(); v23PrinterTypeToggle(); },600);
+setTimeout(function(){ opsLoadToggles(); },600);
 
 // ── 3) COMPACT 80mm BILL ─────────────────────────────────
 // Override printBill with compact version
@@ -8750,11 +8068,6 @@ var _v25ImagesEnabled = localStorage.getItem('v25_images_on') !== '0'; // on by 
 
 function v25SaveImage(itemId, base64) {
   _v25Images[itemId] = base64;
-  localStorage.setItem('v25_menu_images', JSON.stringify(_v25Images));
-}
-
-function v25RemoveImage(itemId) {
-  delete _v25Images[itemId];
   localStorage.setItem('v25_menu_images', JSON.stringify(_v25Images));
 }
 
@@ -10439,7 +9752,7 @@ window.v27ForcePoll=function(){ try{ if(v27LAN) v27PollLanOrders(); }catch(e){} 
 window.v27IsLan=function(){ return !!v27LAN; };
 window.v27PlayTone=function(){ try{ v27PlayNewOrderTone(); }catch(e){} };
 function v27StartAdminMobileListener(){
-  if(v27LAN){ v27PollLanOrders(); if(v27AdminPollTimer) clearInterval(v27AdminPollTimer); v27AdminPollTimer=setInterval(v27PollLanOrders,3000); return; }
+  if(v27LAN){ v27PollLanOrders(); if(v27AdminPollTimer) clearInterval(v27AdminPollTimer); v27AdminPollTimer=setInterval(v27PollLanOrders,20000); return; }
   if(v27FbListenerAttached) return;
   if(typeof fbDB==='undefined'||!fbDB) return;
   v27FbListenerAttached=true;
@@ -10727,7 +10040,9 @@ function buildMenuScreen(){
     '<div class="v27ms-cartbar" id="v27ms-cartbar" style="display:none"><div><b id="v27ms-cc">0</b> items · <b id="v27ms-ct">₹0</b></div><button class="v27ms-send" onclick="v27_menuSend()">Send Order →</button></div>';
   document.body.appendChild(s); document.body.style.overflow='hidden';
   fetchMenu(renderMenu);
-  setInterval(function(){ fetchMenu(renderMenu); }, 20000); // live refresh
+  // SSE 'menu' event (below) already triggers an instant refetch on real changes —
+  // this is just the fallback for a missed event, so a slow interval is enough.
+  setInterval(function(){ fetchMenu(renderMenu); }, 180000);
 }
 function renderMenu(){
   var body=document.getElementById('v27ms-body'); if(!body) return;
@@ -11031,12 +10346,6 @@ function bset(){ try{return JSON.parse(localStorage.getItem('ja3_bset')||'{}');}
 function shopName(){ var b=bset(); return b.name||b.shop||b.shopName||'Jay Ambe Fast Food'; }
 function shopAddr(){ var b=bset(); return b.addr||b.address||b.line2||''; }
 
-/* ── derive the stations actually in use (categories may add custom ones) ── */
-function allStations(){
-  var set={}; STATIONS.forEach(function(s){set[s]=1;});
-  try{ var cats=(typeof v22Categories!=='undefined'&&v22Categories)?v22Categories:[]; cats.forEach(function(c){ if(c&&c.station) set[c.station]=1; }); }catch(e){}
-  return Object.keys(set);
-}
 function stationForItem(it){
   if(it && it.station) return it.station;
   try{ var cats=(typeof v22Categories!=='undefined'&&v22Categories)?v22Categories:[]; var c=cats.find(function(x){return x.name===(it&&it.cat);}); if(c&&c.station) return c.station; }catch(e){}
@@ -11430,6 +10739,9 @@ function _debounce(fn, ms) {
 }
 window._v28p3DebItems  = _debounce(function(){ if (typeof window.renderItems  === 'function') window.renderItems();  }, 200);
 window._v28p3DebOrders = _debounce(function(){ if (typeof window.renderOrders === 'function') window.renderOrders(); }, 250);
+// Menu Manager search (#m-search) does a full double table rebuild per keystroke
+// (renderMenuManage + v31 Menu Pro's renderPro hook) — debounce like the above two.
+window._v28p3DebMenu   = _debounce(function(){ if (typeof window.renderMenuManage === 'function') window.renderMenuManage(); }, 200);
 
 // ── #20a. Token storage + auto-attach helper ──
 var TOKEN_KEY = 'ja_v28_token';
@@ -12124,8 +11436,8 @@ function _refreshHappyBanner() {
   }
   window.v28p4_autoApplyHappy();
 }
-setInterval(_refreshHappyBanner, 60000);
-setInterval(_refreshCounts, 5000);
+setInterval(_refreshHappyBanner, 120000);
+setInterval(_refreshCounts, 15000);
 
 function _injectSettingsCard() {
   var settings = document.getElementById('pg-settings');
@@ -14015,7 +13327,7 @@ if(typeof window.restoreBackup==='function'){
 }
 
 /* ── 10. PRINTER MAPPING — PIN ── */
-['v28_savePrinters','savePrinterConfig','v23SavePrinter','saveSectionPrinterFromModal'].forEach(function(fn){
+['v28_savePrinters'].forEach(function(fn){
   if(typeof window[fn]!=='function') return;
   var prev=window[fn];
   window[fn]=function(){
@@ -14236,7 +13548,7 @@ setInterval(function(){
       if(t) t.textContent=Math.ceil((pinFailBlockUntil-Date.now())/1000)+' second ruko, phir try karo';
     } else if(blk){ blk.remove(); }
   }catch(e){}
-},700);
+},1000);
 
 /* ── 18. EMERGENCY MODE — boot check + Firebase remote lock ── */
 if(JASEC.emergencyActive()) JASEC.showEmergency();
@@ -17063,7 +16375,7 @@ function autoPrintKOT(order,mo){
   }catch(e){}
   return false;
 }
-setInterval(autoTick,20000);
+setInterval(autoTick,60000); // SSE 'order' event above already triggers autoTick instantly; this is just the SSE-miss fallback
 
 /* ── public API ── */
 window.JAB={
@@ -17184,7 +16496,10 @@ function saveMeta(m,push){
   try{ localStorage.setItem(META_LS,JSON.stringify(m)); }catch(e){}
   if(push&&origin) fetch(origin+'/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({config:{v31printers:m}})}).catch(function(){});
 }
-window.v31PrinterWidth=function(p){ var x=meta().meta[p]; return (x&&x.w)||32; };
+/* Default 42 (80mm) — the common commercial thermal-receipt standard (58mm is
+   mostly small/pocket printers). An unconfirmed width is what makes bills look
+   narrow/off-center on real 80mm paper — see the "not confirmed" chip below. */
+window.v31PrinterWidth=function(p){ var x=meta().meta[p]; return (x&&x.w)||42; };
 window.v31PrinterCopies=function(p){ var x=meta().meta[p]; return (x&&x.copies)||1; };
 
 /* ── read the two existing routing configs (draft-level, बिना guard) ── */
@@ -17288,13 +16603,14 @@ function render(){
   if(!ps.length){ host.innerHTML='<div class="v31pc-empty">🔍 Detect dabao — is PC ke saare printers aa jayenge<br>ya "Add Printer" se network printer ka naam daalo</div>'; return; }
   var m=meta(), pc=proCfg();
   host.innerHTML=ps.map(function(p){
-    var mm=m.meta[p]||{}; var w=mm.w||32, cp=mm.copies||1;
+    var mm=m.meta[p]||{}; var w=mm.w||42, cp=mm.copies||1, widthConfirmed=(mm.w!=null);
     var manual=m.manual.indexOf(p)>=0, live=detected.indexOf(p)>=0;
     return '<div class="v31pc-row">'+
       '<div class="v31pc-icon">🖨️</div>'+
       '<div class="v31pc-main">'+
         '<div class="v31pc-name"><input class="v31-inp" data-pcn="'+attr(p)+'" value="'+attr(pc.names[p]||'')+'" placeholder="Friendly naam (jaise: Kitchen)" style="width:170px;font-weight:800">'+
-          (live?'<span class="v31pc-chip bill">● online</span>':(manual?'<span class="v31pc-chip stn">manual</span>':'<span class="v31pc-chip off">saved</span>'))+'</div>'+
+          (live?'<span class="v31pc-chip bill">● online</span>':(manual?'<span class="v31pc-chip stn">manual</span>':'<span class="v31pc-chip off">saved</span>'))+
+          (widthConfirmed?'':'<span class="v31pc-chip" style="background:#fff3e2;color:#b25e00">⚠️ Paper width confirm karo →</span>')+'</div>'+
         '<div class="v31pc-real">'+esc(p)+'</div>'+
         '<div class="v31pc-chips">'+assignChips(p)+'</div>'+
       '</div>'+
@@ -17319,7 +16635,7 @@ function render(){
     };
   });
   host.querySelectorAll('[data-pcw]').forEach(function(sel){
-    sel.onchange=function(){ var mm=meta(); var p=sel.getAttribute('data-pcw'); mm.meta[p]=mm.meta[p]||{}; mm.meta[p].w=parseInt(sel.value,10)||32; saveMeta(mm,false); };
+    sel.onchange=function(){ var mm=meta(); var p=sel.getAttribute('data-pcw'); mm.meta[p]=mm.meta[p]||{}; mm.meta[p].w=parseInt(sel.value,10)||42; saveMeta(mm,false); render(); };
   });
   host.querySelectorAll('[data-pcc]').forEach(function(sel){
     sel.onchange=function(){ var mm=meta(); var p=sel.getAttribute('data-pcc'); mm.meta[p]=mm.meta[p]||{}; mm.meta[p].copies=parseInt(sel.value,10)||1; saveMeta(mm,false); };
@@ -17441,7 +16757,6 @@ console.log('🖨️ [v31] Printer Center ready');
 .v31mp-bulk{display:none;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 12px;background:var(--soft,#f2f7f4);border:1.5px dashed var(--brand,#0a9e5c);border-radius:12px;margin:8px 0}
 .v31mp-bulk.on{display:flex}
 .v31mp-scroll{max-height:560px;overflow:auto;border:1.5px solid var(--line,#e8ecf0);border-radius:12px}
-.item.v31-off-item{opacity:.35;filter:grayscale(1);pointer-events:none}
 </style>
 <script id="v31-menu-pro">
 /* ═══════════════════════════════════════════════════════════════════
