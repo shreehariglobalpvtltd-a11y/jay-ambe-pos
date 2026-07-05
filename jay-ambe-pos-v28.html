@@ -2210,7 +2210,7 @@ function billDocHead(){
     'hr.s{border-top:1.5px solid #000;margin:1mm 0}'+
     '.bill-slip{page-break-after:always}'+
     '.bill-slip:last-child{page-break-after:auto}'+
-    'img.plogo{filter:grayscale(1) contrast(1.8);-webkit-filter:grayscale(1) contrast(1.8)}'+
+    'img.plogo{background:#fff;filter:grayscale(1) contrast(1.2);-webkit-filter:grayscale(1) contrast(1.2)}'+
     '</style>';
 }
 
@@ -3222,7 +3222,12 @@ function v28CompressLogoImage(file,maxDim,cb){
       var scale=Math.min(1,maxDim/Math.max(w,h));
       var cw=Math.max(1,Math.round(w*scale)),ch=Math.max(1,Math.round(h*scale));
       var canvas=document.createElement('canvas');canvas.width=cw;canvas.height=ch;
-      canvas.getContext('2d').drawImage(img,0,0,cw,ch);
+      var ctx=canvas.getContext('2d');
+      /* transparent PNGs must be flattened onto white here — once — so no
+         downstream consumer (print filter, thermal rasterizer, dark theme)
+         ever has to deal with alpha and shows a black box instead. */
+      ctx.fillStyle='#fff'; ctx.fillRect(0,0,cw,ch);
+      ctx.drawImage(img,0,0,cw,ch);
       try{ cb(canvas.toDataURL('image/png')); }catch(e){ cb(reader.result); }
     };
     img.onerror=function(){ cb(reader.result); };
@@ -7412,7 +7417,7 @@ window.printBill=function(order){
   // Build compact bill HTML
   var h='<div class="v23-bill">';
   // Logo
-  if(logoSrc) h+='<div class="bc"><img class="blogo" src="'+logoSrc+'" style="filter:grayscale(1) contrast(3) brightness(0.15)"></div>';
+  if(logoSrc) h+='<div class="bc"><img class="blogo" src="'+logoSrc+'"></div>';
   // Header
   h+='<div class="bc"><div class="bname">'+E(bName)+'</div>';
   h+='<div class="baddr">'+bAddr;
@@ -7441,11 +7446,12 @@ window.printBill=function(order){
   h+='<table>';
   h+='<tr><td>Items / Qty</td><td style="text-align:right">'+order.items.length+' / '+qty+'</td></tr>';
   h+='<tr><td>Sub Total</td><td style="text-align:right">₹'+order.total+'</td></tr>';
+  if(order.discount) h+='<tr><td>Discount</td><td style="text-align:right">-₹'+order.discount+'</td></tr>';
   h+='</table>';
-  // Commission removed
   // Grand total
+  var grandTotal=(order.netTotal!=null?order.netTotal:order.total);
   h+='<hr class="s">';
-  h+='<div class="gt"><b>TOTAL: ₹'+order.total+'</b></div>';
+  h+='<div class="gt"><b>TOTAL: ₹'+grandTotal+'</b></div>';
   h+='<div style="text-align:center;font-size:12pt;border:2px solid #000;padding:1.5mm;margin:1.5mm 0">'+E((order.pay||'Cash').toUpperCase())+' | '+E((order.status||'').toUpperCase())+'</div>';
   h+='<hr>';
   // Footer
@@ -7463,12 +7469,12 @@ window.printBill=function(order){
     '@page{margin:0;size:80mm auto}*{box-sizing:border-box}html,body{margin:0;padding:0;width:80mm}'+
     'body{-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
     '.v23-bill{font-family:"Courier New",Courier,monospace;font-size:11pt;width:80mm;padding:2mm 2.5mm 4mm;color:#000;background:#fff;line-height:1.3;font-weight:bold}'+
-    '.bc{text-align:center;width:100%}.blogo{display:block;margin:0 auto 1.5mm;width:22mm;height:22mm;object-fit:contain;border-radius:4px}'+
+    '.bc{text-align:center;width:100%}.blogo{display:block;margin:0 auto 1.5mm;width:22mm;height:22mm;object-fit:contain;border-radius:4px;background:#fff}'+
     '.bname{font-size:13pt;letter-spacing:.5px;line-height:1.2}.baddr{font-size:9pt;line-height:1.5;margin-top:.5mm}'+
     'hr{border:none;border-top:1.5px dashed #000;margin:2mm 0;width:100%}hr.s{border-top:2.5px solid #000}'+
     'table{width:100%;border-collapse:collapse;font-size:11pt}td,th{font-weight:bold;padding:.3mm 1mm}'+
     '.gt{font-size:16pt;text-align:center;margin:1.5mm 0}'+
-    'img.blogo{filter:grayscale(1) contrast(3) brightness(0.15);-webkit-filter:grayscale(1) contrast(3) brightness(0.15)}'+
+    'img.blogo{filter:grayscale(1) contrast(1.15);-webkit-filter:grayscale(1) contrast(1.15)}'+
     '</style></head><body>'+h+'</body></html>');
   popup.document.close();
   // INSTANT PRINT - No delays
@@ -9396,6 +9402,32 @@ else { document.addEventListener('DOMContentLoaded', jaSecurityInit); }
   .v27-status-badge{display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:var(--r-pill);font-weight:800;font-size:13px}
   .v27-step{border-left:3px solid var(--brand2);padding:8px 0 8px 12px;margin:8px 0}
   .v27-step code{display:inline-block;background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:4px 9px;font-family:var(--font-mono);font-size:12.5px;margin-top:4px}
+
+  /* ── v32: mobile-order responsive polish (one-hand phone use) ── */
+  @media(max-width:768px){
+    .v27m-grid{padding-bottom:calc(56px + 24vh)}
+    .v27m-drawer.open .v27m-cartfull{max-height:50vh}
+  }
+  @media(max-width:480px){
+    .v27m-grid{grid-template-columns:1fr;gap:10px;padding:10px 12px calc(56px + 24vh)}
+    .v27m-card{padding:14px 62px 14px 14px;min-height:auto}
+    .v27m-search{font-size:16px}
+    .v27m-step button{width:44px;height:44px;font-size:20px}
+    .v27m-step span{min-width:36px;font-size:15px}
+    .v27m-crow{flex-wrap:wrap;row-gap:6px}
+    .v27m-table-pills{grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:10px}
+    .v27m-table-pill{padding:14px 4px;font-size:14px}
+    .v27m-drawer.open .v27m-cartfull{max-height:58vh}
+    .v27m-chips{gap:6px;padding:10px 12px}
+    .v27m-chip{padding:7px 12px;font-size:12.5px}
+  }
+  @media(max-width:340px){
+    .v27m-card .v27m-nm{font-size:13px}
+    .v27m-card .v27m-pr{font-size:15px}
+    .v27m-brand{font-size:14px}
+    .v27m-clock{font-size:11px}
+    .v27m-table-pills{grid-template-columns:repeat(auto-fill,minmax(56px,1fr))}
+  }
 </style>
 <script id="v27-script">
 /* Jay Ambe POS v27 — additive module. No existing code modified. */
@@ -9937,14 +9969,6 @@ function v27InjectSettings(){
         '<div class="v27-step"><b>Step 5:</b> Mobile browser mein kholo:<br><code>http://192.168.X.X:3000/jay-ambe-pos-v27.html</code></div>'+
       '</details>';
     wrap.appendChild(c2);
-  }
-  if(!document.getElementById('v27-qr-card')){
-    var c3=document.createElement('div'); c3.className='card'; c3.id='v27-qr-card';
-    c3.innerHTML='<div class="card-h">📱 Mobile QR Codes</div>'+
-      '<p style="font-size:12px;color:var(--muted);margin-bottom:10px">One QR per table. Waiter scans → opens the mobile order page for that table. Uses the IP/Port above.</p>'+
-      '<button class="btn btn-brand btn-sm" onclick="v27_genQR()">⚙️ Generate QR Codes</button>'+
-      '<div class="v27-qr-grid" id="v27-qr-grid"></div>';
-    wrap.appendChild(c3);
   }
   v27_refreshLan();
 }
@@ -17195,13 +17219,15 @@ function num(n){ return String(Math.round(n||0)); }
 
 /* ── KOT text (bada, readable) ── */
 function buildKot(order,label,items,w){
-  var t=[];
+  var t=[], kb=bset();
   t.push(ln(w,'='));
+  wrap(w,(kb.name||'JAY AMBE FAST FOOD & RESTAURANT').toUpperCase()).forEach(function(l){ t.push(ctr(w,l.trim())); });
   t.push(ctr(w,'*** KITCHEN ORDER ***'));
   if(label) t.push(ctr(w,String(label).toUpperCase()));
   t.push(ln(w,'='));
-  t.push(lr(w,'TABLE: '+(order.train||order.table||'-'),'#'+(order.id||'')));
-  t.push(lr(w,'Time: '+(order.time||new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})),(order.orderType==='parcel'?'PARCEL':'')));
+  t.push(lr(w,'TABLE: '+(order.train||order.table||'-'),'KOT #'+(order.id||'')));
+  t.push(lr(w,'Date: '+new Date().toLocaleDateString('en-IN'),(order.time||new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}))));
+  if(order.orderType==='parcel') t.push(ctr(w,'*** PARCEL ***'));
   if(order.waiter) t.push('Waiter: '+order.waiter);
   if(order.billerName) t.push('Biller: '+order.billerName);
   t.push(ln(w,'-'));
@@ -17453,6 +17479,717 @@ function check(){
 if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){ setTimeout(put,300); });
 else setTimeout(put,300);
 setTimeout(put,1500);   /* chooser rebuild ke baad bhi */
+})();
+</script>
+
+<script id="v32-partitions">
+/* ═══════════════════════════════════════════════════════════════════
+   JAY AMBE POS v32 — TABLE PARTITIONS
+   Table ke andar unlimited sections (A/B/C...). Order lete waqt section
+   choose karo (optional); har section apna printer bhi le sakta hai
+   (Printer Center → 🔗 Assign). Tables jinme partitions nahi hai unke
+   liye kuch nahi badalta — zero extra clicks.
+   ═══════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+if(window.__v32Partitions) return; window.__v32Partitions=true;
+
+function esc(s){ return (typeof escHtml==='function')?escHtml(s):String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function attr(s){ return esc(s).replace(/'/g,'&#39;'); }
+function toastSafe(m,t){ try{ if(typeof toast==='function') return toast(m,t); }catch(e){} }
+
+window.JAPT={
+  list:function(tableId){ var t=getTable(tableId); return (t&&t.partitions)||[]; },
+  add:function(tableId,name){
+    var t=getTable(tableId); if(!t) return;
+    name=String(name||'').trim(); if(!name) return;
+    var arr=(t.partitions||[]).slice();
+    if(arr.some(function(x){return x.toLowerCase()===name.toLowerCase();})){ toastSafe('⚠️ Ye section pehle se hai'); return; }
+    arr.push(name);
+    updateTable(tableId,{partitions:arr});
+    toastSafe('✅ Section "'+name+'" add hua');
+  },
+  remove:function(tableId,name){
+    var t=getTable(tableId); if(!t) return;
+    var arr=(t.partitions||[]).filter(function(x){return x!==name;});
+    updateTable(tableId,{partitions:arr});
+    var mm=partMap(); delete mm[t.number+'::'+name]; savePartMap(mm);
+    toastSafe('🗑️ Section hataya');
+    renderModal(tableId);
+  }
+};
+
+function renderModal(tableId){
+  var t=getTable(tableId); if(!t) return;
+  var parts=t.partitions||[];
+  var body='<h3 style="margin:0 0 12px">🔀 '+esc(t.number)+' — Partitions</h3>'+
+    '<p style="font-size:12px;color:var(--muted,#8a949e);margin:0 0 12px">Table ko sections me baanto (jaise A/B/C ya VIP). Order lete waqt staff section choose kar sakta hai; har section apna KOT printer bhi le sakta hai (Printer Center → 🔗 Assign).</p>'+
+    '<div id="v32pt-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">'+
+    (parts.length?parts.map(function(p){
+      return '<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:1.5px solid var(--line,#e3e8ee);border-radius:10px">'+
+        '<span style="flex:1;font-weight:700">🔸 '+esc(p)+'</span>'+
+        '<button type="button" class="btn btn-ghost btn-sm" onclick="JAPT.remove(\''+tableId+'\',\''+attr(p).replace(/'/g,"\\'")+'\')">🗑️ Remove</button>'+
+      '</div>';
+    }).join(''):'<div style="color:var(--muted,#8a949e);font-size:12.5px;padding:6px 0">Koi section nahi — pura table ek hi unit hai.</div>')+
+    '</div>'+
+    '<div style="display:flex;gap:8px">'+
+      '<input id="v32pt-new" placeholder="Naya section (jaise A, B, VIP...)" style="flex:1;padding:10px 12px;border:1.5px solid var(--line,#dfe5eb);border-radius:10px;font-size:13px">'+
+      '<button type="button" class="btn btn-brand btn-sm" onclick="JAPT._addFromModal(\''+tableId+'\')">➕ Add</button>'+
+    '</div>'+
+    '<div style="margin-top:16px;text-align:right"><button type="button" class="btn btn-ghost btn-sm" onclick="closeModal(\'v32pt-modal\')">Done</button></div>';
+  showDynamicModal('v32pt-modal',body);
+  setTimeout(function(){ var inp=document.getElementById('v32pt-new'); if(inp){ inp.focus(); inp.onkeydown=function(e){ if(e.key==='Enter') JAPT._addFromModal(tableId); }; } },150);
+}
+window.JAPT._addFromModal=function(tableId){
+  var inp=document.getElementById('v32pt-new'); if(!inp) return;
+  JAPT.add(tableId,inp.value); inp.value='';
+  renderModal(tableId);
+};
+window.openPartitionsModal=function(tableId){ renderModal(tableId); };
+
+/* ── partition-specific printer map: "<tableNumber>::<partition>" → printer ── */
+var PMAP_LS='ja_v32_partmap';
+function partMap(){ try{ return JSON.parse(localStorage.getItem(PMAP_LS))||{}; }catch(e){ return {}; } }
+function savePartMap(m){
+  try{ localStorage.setItem(PMAP_LS,JSON.stringify(m)); }catch(e){}
+  var origin=(/^https?:$/.test(location.protocol))?location.origin:'';
+  if(origin) fetch(origin+'/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({config:{v32partmap:m}})}).catch(function(){});
+}
+window.v32PartitionPrinter=function(tableNo,partition){ if(!partition) return ''; return partMap()[tableNo+'::'+partition]||''; };
+window.v32SetPartitionPrinter=function(tableNo,partition,printer){
+  var m=partMap();
+  if(printer) m[tableNo+'::'+partition]=printer; else delete m[tableNo+'::'+partition];
+  savePartMap(m);
+};
+window.v32AllPartitionAssignments=partMap;
+
+/* remote sync — other PC ne partition-printer badla */
+(function(){
+  var origin=(/^https?:$/.test(location.protocol))?location.origin:'';
+  if(!origin||!window.EventSource) return;
+  try{
+    var es=new EventSource(origin+'/api/events');
+    es.addEventListener('config',function(ev){
+      try{ var c=JSON.parse(ev.data); if(c&&c.v32partmap) localStorage.setItem(PMAP_LS,JSON.stringify(c.v32partmap)); }catch(e){}
+    });
+  }catch(e){}
+})();
+
+/* ── table select: if partitions exist, ask which one first ── */
+if(typeof window.selectTable==='function'){
+  var _selectTable=window.selectTable;
+  window.selectTable=function(id){
+    var t=getTable(id);
+    if(t && t.partitions && t.partitions.length){
+      var body='<h3 style="margin:0 0 12px">🪑 '+esc(t.number)+' — Kaunsa section?</h3>'+
+        '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:10px">'+
+        t.partitions.map(function(p){
+          return '<button type="button" class="btn btn-ghost" style="padding:16px 8px" onclick="window.__v32ChoosePart(\''+id+'\',\''+attr(p).replace(/'/g,"\\'")+'\')">'+esc(p)+'</button>';
+        }).join('')+
+        '<button type="button" class="btn btn-ghost" style="padding:16px 8px;grid-column:1/-1" onclick="window.__v32ChoosePart(\''+id+'\',\'\')">🪑 Poora Table (no section)</button>'+
+        '</div>';
+      showDynamicModal('v32part-pick',body);
+      return;
+    }
+    state.activePartition='';
+    return _selectTable.apply(this,arguments);
+  };
+  window.__v32ChoosePart=function(id,part){
+    closeModal('v32part-pick');
+    state.activePartition=part||'';
+    _selectTable(id);
+  };
+}
+
+/* ── stamp partition onto the placed/edited order ── */
+if(typeof window.placeOrder==='function'){
+  var _placeOrder=window.placeOrder;
+  window.placeOrder=function(doPrint){
+    var wasEditing=state.editOrderId;
+    var r=_placeOrder.apply(this,arguments);
+    try{
+      var o=wasEditing?state.orders.find(function(x){return x.id===wasEditing;}):state.orders[0];
+      if(o) o.partition=state.activePartition||'';
+    }catch(e){}
+    return r;
+  };
+}
+
+/* ── active table bar: show section badge ── */
+if(typeof window.refreshActiveTableBar==='function'){
+  var _refreshBar=window.refreshActiveTableBar;
+  window.refreshActiveTableBar=function(){
+    var r=_refreshBar.apply(this,arguments);
+    try{
+      var bar=document.getElementById('active-train-bar');
+      var id='v32pt-badge', el=document.getElementById(id);
+      if(bar && state.activeTable && state.activePartition){
+        if(!el){ el=document.createElement('span'); el.id=id; el.style.cssText='font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;background:#f3e8ff;color:#7b2fae;margin-left:6px'; bar.appendChild(el); }
+        el.textContent='🔸 '+state.activePartition;
+      } else if(el) el.remove();
+    }catch(e){}
+    return r;
+  };
+}
+
+/* ── table context menu + details: add a "Partitions" action ── */
+if(typeof window.showTableContextMenu==='function'){
+  var _ctxMenu=window.showTableContextMenu;
+  window.showTableContextMenu=function(event,id){
+    var r=_ctxMenu.apply(this,arguments);
+    try{
+      var menu=document.getElementById('table-ctx');
+      if(menu && !menu.querySelector('[data-v32pt]')){
+        var btn=document.createElement('button');
+        btn.setAttribute('data-v32pt','1');
+        btn.innerHTML='🔀 Partitions';
+        btn.onclick=function(){ openPartitionsModal(id); removeContextMenu(); };
+        menu.insertBefore(btn,menu.firstChild);
+      }
+    }catch(e){}
+    return r;
+  };
+}
+if(typeof window.openTableDetails==='function'){
+  var _tblDetails=window.openTableDetails;
+  window.openTableDetails=function(id){
+    var r=_tblDetails.apply(this,arguments);
+    try{
+      var host=document.getElementById('td-content');
+      var t=getTable(id);
+      if(host && t){
+        var d=document.createElement('div'); d.style.marginTop='14px';
+        var parts=t.partitions||[];
+        d.innerHTML='<div class="fld"><label>Partitions</label><div style="font-weight:800">'+(parts.length?esc(parts.join(', ')):'None')+'</div></div>'+
+          '<button type="button" class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="openPartitionsModal(\''+id+'\')">🔀 Manage Partitions</button>';
+        host.appendChild(d);
+      }
+    }catch(e){}
+    return r;
+  };
+}
+console.log('🔀 [v32] Table Partitions ready');
+})();
+</script>
+
+<script id="v32-universal-qr">
+/* ═══════════════════════════════════════════════════════════════════
+   JAY AMBE POS v32 — UNIVERSAL QR PRINT CARD
+   v29 Device Access card already generates ONE QR for the whole
+   restaurant (?role=mobile, no table baked in) + the mobile page already
+   shows a table-picker when opened without a table param, and staff can
+   switch tables anytime. Ye block sirf ek "Print Table Card" button
+   jodta hai taaki wahi ek QR nicely print ho — sab tables ke liye same.
+   ═══════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+if(window.__v32UniversalQR) return; window.__v32UniversalQR=true;
+var url=new URLSearchParams(location.search);
+if(url.get('role')==='menu'||url.get('menu')==='1') return;
+function esc(s){ return (typeof escHtml==='function')?escHtml(s):String(s==null?'':s); }
+function shopName(){ try{ var b=JSON.parse(localStorage.getItem('ja3_bset')||'{}'); return b.name||'Jay Ambe Fast Food'; }catch(e){ return 'Jay Ambe Fast Food'; } }
+
+function addPrintButton(){
+  var qrBox=document.getElementById('v29a-qr-staff');
+  var urlEl=document.getElementById('v29a-url-staff');
+  if(!qrBox||!urlEl||document.getElementById('v32-qr-print-btn')) return;
+  var btn=document.createElement('button');
+  btn.type='button'; btn.className='btn btn-brand btn-sm'; btn.id='v32-qr-print-btn';
+  btn.style.cssText='margin-top:10px;display:block';
+  btn.innerHTML='🖨️ Print Table Card (1 hi QR — har table ke liye)';
+  btn.onclick=function(){
+    var canvas=qrBox.querySelector('canvas'), img=qrBox.querySelector('img');
+    var data=''; if(canvas){ try{ data=canvas.toDataURL('image/png'); }catch(e){} } else if(img){ data=img.src; }
+    var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Order QR</title><style>'+
+      'body{font-family:sans-serif;text-align:center;padding:40px}h1{font-size:22px;margin:0 0 4px}'+
+      '.sub{color:#555;font-size:13px;margin-bottom:20px}img{width:260px;height:260px}'+
+      '.foot{margin-top:16px;font-size:14px;color:#333}@media print{@page{margin:10mm}}'+
+      '</style></head><body><h1>📱 '+esc(shopName())+'</h1>'+
+      '<div class="sub">Scan karke order karo — kisi bhi table se</div>'+
+      (data?('<img src="'+data+'">'):'<p>QR abhi generate nahi hua — Settings me "Device Access" card try karo</p>')+
+      '<div class="foot">Scan → Apna table chuno → Order karo</div></body></html>';
+    var f=document.createElement('iframe'); f.style.cssText='position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+    document.body.appendChild(f); var d=f.contentWindow.document; d.open(); d.write(html); d.close();
+    setTimeout(function(){ try{ f.contentWindow.focus(); f.contentWindow.print(); }catch(e){} setTimeout(function(){ try{ document.body.removeChild(f); }catch(e){} },3000); },400);
+  };
+  urlEl.parentNode.appendChild(btn);
+}
+if(typeof window.onShow==='function'){
+  var _show4=window.onShow;
+  window.onShow=function(pg){ var r=_show4.apply(this,arguments); if(pg==='settings') setTimeout(addPrintButton,1700); return r; };
+}
+setTimeout(addPrintButton,2400);
+console.log('🔗 [v32] Universal QR print-card ready');
+})();
+</script>
+
+<script id="v32-printer-pro">
+/* ═══════════════════════════════════════════════════════════════════
+   JAY AMBE POS v32 — PRINTER MANAGEMENT PRO
+   v31 Printer Center par: Enable/Disable, Duplicate, full Remove, IP/
+   network printer support, aur EK screen se Category+Table+Bill assign.
+   ═══════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+if(window.__v32PrinterPro) return; window.__v32PrinterPro=true;
+var url=new URLSearchParams(location.search);
+if(url.get('role')==='menu'||url.get('menu')==='1') return;
+var origin=(/^https?:$/.test(location.protocol))?location.origin:'';
+function esc(s){ return (typeof escHtml==='function')?escHtml(s):String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function attr(s){ return esc(s).replace(/'/g,'&#39;'); }
+function toastSafe(m,t){ try{ if(typeof toast==='function') return toast(m,t); }catch(e){} }
+
+var META_LS='ja_v31_printers';
+function meta(){ var m; try{ m=JSON.parse(localStorage.getItem(META_LS))||{}; }catch(e){ m={}; } m.meta=m.meta||{}; m.manual=m.manual||[]; m.hidden=m.hidden||[]; return m; }
+function saveMeta(m){
+  m.updatedAt=Date.now();
+  try{ localStorage.setItem(META_LS,JSON.stringify(m)); }catch(e){}
+  if(origin) fetch(origin+'/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({config:{v31printers:m}})}).catch(function(){});
+}
+function proCfg(){ var c; try{ c=JSON.parse(localStorage.getItem('ja29_printcfg'))||{}; }catch(e){ c={}; } c.names=c.names||{}; c.rules=c.rules||[]; c.def=c.def||''; if(c.on==null)c.on=false; return c; }
+function saveProCfg(c){
+  try{ localStorage.setItem('ja29_printcfg',JSON.stringify(c)); }catch(e){}
+  if(origin) fetch(origin+'/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({config:{printcfg:c}})}).catch(function(){});
+}
+function mapCfg(){ var m; try{ m=JSON.parse(localStorage.getItem('ja_v28_printmap'))||{}; }catch(e){ m={}; } m.stations=m.stations||{}; m.tables=m.tables||{}; return m; }
+function saveMapCfg(m){
+  try{ localStorage.setItem('ja_v28_printmap',JSON.stringify(m)); }catch(e){}
+  if(origin) fetch(origin+'/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({config:{printmap:m}})}).catch(function(){});
+}
+function cats(){ try{ return (typeof v22Categories!=='undefined'&&v22Categories)?v22Categories.map(function(c){return c.name;}):[]; }catch(e){ return []; } }
+function tables(){ try{ return (typeof allTables!=='undefined'&&allTables)?allTables:{}; }catch(e){ return {}; } }
+
+/* ── row-level actions ── */
+window.JAPC2={
+  toggle:function(p){
+    var m=meta(); m.meta[p]=m.meta[p]||{}; m.meta[p].enabled=(m.meta[p].enabled===false);
+    saveMeta(m); refresh();
+    toastSafe(m.meta[p].enabled?('✅ '+p+' enabled'):('⛔ '+p+' disabled — is par print nahi jaayega'));
+  },
+  duplicate:function(p){
+    var name=prompt('Naye printer ka naam (jaise "'+p+' (copy)"):', p+' (copy)');
+    if(!name||!name.trim()) return;
+    name=name.trim();
+    var m=meta(); if(m.manual.indexOf(name)<0) m.manual.push(name);
+    m.meta[name]=JSON.parse(JSON.stringify(m.meta[p]||{}));
+    saveMeta(m);
+    var pc=proCfg(); if(pc.names[p]) pc.names[name]=pc.names[p]+' (copy)'; saveProCfg(pc);
+    refresh();
+    toastSafe('📑 Duplicate bana: '+name);
+  },
+  remove:function(p){
+    if(!confirm(p+' ko poori tarah remove karu? Saari assignments (KOT/Bill/Table/Category) bhi hat jayengi.')) return;
+    var m=meta();
+    m.manual=m.manual.filter(function(x){return x!==p;});
+    if(m.hidden.indexOf(p)<0) m.hidden.push(p);
+    delete m.meta[p];
+    saveMeta(m);
+    var pc=proCfg(); pc.rules=pc.rules.filter(function(r){return r.printer!==p;}); if(pc.def===p) pc.def=''; delete pc.names[p]; saveProCfg(pc);
+    var mc=mapCfg(); if(mc.bill===p) mc.bill=''; Object.keys(mc.stations).forEach(function(s){ if(mc.stations[s]===p) mc.stations[s]=''; }); Object.keys(mc.tables).forEach(function(t){ if(mc.tables[t]===p) delete mc.tables[t]; }); saveMapCfg(mc);
+    var pm; try{ pm=JSON.parse(localStorage.getItem('ja_v32_partmap'))||{}; }catch(e){ pm={}; }
+    Object.keys(pm).forEach(function(k){ if(pm[k]===p) delete pm[k]; });
+    try{ localStorage.setItem('ja_v32_partmap',JSON.stringify(pm)); }catch(e){}
+    refresh();
+    toastSafe('🗑️ '+p+' remove ho gaya');
+  },
+  addIP:function(){
+    var name=prompt('Printer ka naam do (jaise "Kitchen 2"):'); if(!name||!name.trim()) return;
+    var addr=prompt('IP:Port do (jaise 192.168.1.50:9100 — thermal printer ka raw port, kaafi models me 9100 hota hai):');
+    if(!addr||!/^\d{1,3}(\.\d{1,3}){3}:\d{1,5}$/.test(addr.trim())){ toastSafe('⚠️ Sahi format: 192.168.1.50:9100','error'); return; }
+    addr=addr.trim();
+    var m=meta(); if(m.manual.indexOf(addr)<0) m.manual.push(addr); m.meta[addr]=m.meta[addr]||{}; m.meta[addr].type='ip';
+    saveMeta(m);
+    var pc=proCfg(); pc.names[addr]=name.trim(); saveProCfg(pc);
+    refresh();
+    toastSafe('➕ Network printer add hua: '+name.trim());
+  },
+  assign:function(p){ openAssignModal(p); },
+  _saveAssign:function(p){
+    var mc=mapCfg();
+    var billChk=document.getElementById('v32as-bill');
+    if(billChk&&billChk.checked) mc.bill=p; else if(mc.bill===p) mc.bill='';
+    document.querySelectorAll('[data-v32as-stn]').forEach(function(chk){ var s=chk.getAttribute('data-v32as-stn'); if(chk.checked) mc.stations[s]=p; else if(mc.stations[s]===p) mc.stations[s]=''; });
+    document.querySelectorAll('[data-v32as-tbl]').forEach(function(chk){ var t=chk.getAttribute('data-v32as-tbl'); if(chk.checked) mc.tables[t]=p; else if(mc.tables[t]===p) delete mc.tables[t]; });
+    mc.enabled=true;
+    saveMapCfg(mc);
+
+    var pc=proCfg();
+    pc.rules=pc.rules.filter(function(r){ return !(r.type==='category'&&r.printer===p); });
+    var anyCat=false;
+    document.querySelectorAll('[data-v32as-cat]').forEach(function(chk){
+      var c=chk.getAttribute('data-v32as-cat');
+      if(chk.checked){ pc.rules.push({id:'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),type:'category',cond:c,printer:p}); anyCat=true; }
+    });
+    if(anyCat) pc.on=true;
+    saveProCfg(pc);
+
+    document.querySelectorAll('[data-v32as-pp]').forEach(function(chk){
+      var tno=chk.getAttribute('data-v32as-pt'), part=chk.getAttribute('data-v32as-pp');
+      if(chk.checked) window.v32SetPartitionPrinter(tno,part,p);
+      else if(window.v32PartitionPrinter && v32PartitionPrinter(tno,part)===p) window.v32SetPartitionPrinter(tno,part,'');
+    });
+
+    closeModal('v32as-modal');
+    refresh();
+    toastSafe('💾 Assignment save ho gayi: '+(proCfg().names[p]||p));
+  }
+};
+
+function openAssignModal(p){
+  var pc=proCfg(), mc=mapCfg();
+  var catList=cats();
+  var tbls=tables();
+  var tblKeys=Object.keys(tbls).sort(function(a,b){return parseInt(a)-parseInt(b);});
+  var activeCatRules={};
+  pc.rules.filter(function(r){return r.type==='category'&&r.printer===p;}).forEach(function(r){ activeCatRules[String(r.cond||'').toLowerCase()]=true; });
+  var body='<h3 style="margin:0 0 4px">🔗 Assign — '+esc(pc.names[p]||p)+'</h3>'+
+    '<p style="font-size:11.5px;color:var(--muted,#8a949e);margin:0 0 14px">Ye printer kis kaam ke liye — categories, tables, ya Bill. Sab ek hi jagah se, ek screen.</p>'+
+    '<div style="margin-bottom:14px"><b style="font-size:12.5px">🧾 Bill Printer</b><br>'+
+      '<label style="display:inline-flex;align-items:center;gap:8px;margin-top:6px;font-size:13px"><input type="checkbox" id="v32as-bill" '+(mc.bill===p?'checked':'')+'> Isse Bill print ho</label></div>'+
+    '<div style="margin-bottom:14px"><b style="font-size:12.5px">🍳 Station Default (fallback)</b><br>'+
+      '<div style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap">'+
+      ['kitchen','bar','counter'].map(function(s){ return '<label style="display:inline-flex;align-items:center;gap:6px;font-size:13px"><input type="checkbox" data-v32as-stn="'+s+'" '+(mc.stations[s]===p?'checked':'')+'> '+s+'</label>'; }).join('')+
+      '</div></div>'+
+    '<div style="margin-bottom:14px"><b style="font-size:12.5px">📋 Categories (KOT)</b><br>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;max-height:120px;overflow-y:auto">'+
+      (catList.length?catList.map(function(c){ return '<label style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;border:1.5px solid var(--line,#e3e8ee);border-radius:8px;padding:5px 9px"><input type="checkbox" data-v32as-cat="'+attr(c)+'" '+(activeCatRules[c.toLowerCase()]?'checked':'')+'> '+esc(c)+'</label>'; }).join(''):'<span style="color:var(--muted,#8a949e)">Koi category nahi mili</span>')+
+      '</div></div>'+
+    '<div style="margin-bottom:6px"><b style="font-size:12.5px">🪑 Tables (+ sections)</b><br>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;max-height:150px;overflow-y:auto">'+
+      tblKeys.map(function(k){
+        var t=tbls[k]; var no=t.number||k;
+        var rows='<label style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;border:1.5px solid var(--line,#e3e8ee);border-radius:8px;padding:5px 9px"><input type="checkbox" data-v32as-tbl="'+attr(no)+'" '+((mc.tables||{})[String(no)]===p?'checked':'')+'> 🪑 '+esc(no)+'</label>';
+        (t.partitions||[]).forEach(function(part){
+          var cur=window.v32PartitionPrinter?v32PartitionPrinter(String(no),part):'';
+          rows+='<label style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;border:1.5px dashed var(--brand,#0a9e5c);border-radius:8px;padding:5px 9px;background:#faf5ff"><input type="checkbox" data-v32as-pt="'+attr(no)+'" data-v32as-pp="'+attr(part)+'" '+(cur===p?'checked':'')+'> 🔸 '+esc(no)+'-'+esc(part)+'</label>';
+        });
+        return rows;
+      }).join('')+
+      '</div></div>'+
+    '<div style="margin-top:16px;display:flex;justify-content:flex-end;gap:8px">'+
+      '<button type="button" class="btn btn-ghost btn-sm" onclick="closeModal(\'v32as-modal\')">Cancel</button>'+
+      '<button type="button" class="btn btn-brand btn-sm" onclick="JAPC2._saveAssign(\''+attr(p).replace(/'/g,"\\'")+'\')">💾 Save</button>'+
+    '</div>';
+  showDynamicModal('v32as-modal',body);
+}
+
+/* ── decorate v31's rows with the extra controls (observer-driven, layer-agnostic) ── */
+function decorate(){
+  var host=document.getElementById('v31pc-list'); if(!host) return;
+  var m=meta();
+  Array.prototype.forEach.call(host.querySelectorAll('.v31pc-row'),function(row){
+    var sel=row.querySelector('[data-pcw]'); if(!sel) return;
+    var p=sel.getAttribute('data-pcw');
+    if(m.hidden.indexOf(p)>=0){ row.remove(); return; }
+    var mm=m.meta[p]||{};
+    var enabled=mm.enabled!==false;
+    row.style.opacity=enabled?'':'.55';
+    var ctrl=row.querySelector('.v31pc-ctrl');
+    if(!ctrl || ctrl.querySelector('[data-v32c]')) return;
+    var wrap=document.createElement('span'); wrap.setAttribute('data-v32c','1'); wrap.style.cssText='display:flex;gap:6px;flex-wrap:wrap';
+    wrap.innerHTML=
+      '<button type="button" class="btn btn-ghost btn-sm" data-v32-tog>'+(enabled?'⛔ Disable':'✅ Enable')+'</button>'+
+      '<button type="button" class="btn btn-ghost btn-sm" data-v32-dup>📑 Duplicate</button>'+
+      '<button type="button" class="btn btn-brand btn-sm" data-v32-asn>🔗 Assign</button>'+
+      '<button type="button" class="btn btn-ghost btn-sm" data-v32-rm style="color:#c0392b">🗑️ Remove</button>';
+    ctrl.appendChild(wrap);
+    wrap.querySelector('[data-v32-tog]').onclick=function(){ JAPC2.toggle(p); };
+    wrap.querySelector('[data-v32-dup]').onclick=function(){ JAPC2.duplicate(p); };
+    wrap.querySelector('[data-v32-asn]').onclick=function(){ JAPC2.assign(p); };
+    wrap.querySelector('[data-v32-rm]').onclick=function(){ JAPC2.remove(p); };
+  });
+}
+function refresh(){ try{ if(window.JAPC&&JAPC._render) JAPC._render(); }catch(e){} setTimeout(decorate,30); }
+function addToolbarButton(){
+  var host=document.getElementById('v31pc-list'); if(!host||!host.parentNode) return;
+  var addBtn=host.parentNode.querySelector('[onclick="JAPC.addManual()"]');
+  if(addBtn && !document.getElementById('v32-addip-btn')){
+    var ipBtn=document.createElement('button'); ipBtn.type='button'; ipBtn.className='btn btn-ghost btn-sm'; ipBtn.id='v32-addip-btn';
+    ipBtn.innerHTML='🌐 Add Network/IP Printer';
+    ipBtn.onclick=function(){ JAPC2.addIP(); };
+    addBtn.parentNode.insertBefore(ipBtn, addBtn.nextSibling);
+  }
+}
+function ensureObserver(){
+  var host=document.getElementById('v31pc-list');
+  if(host && !host.__v32obs){
+    host.__v32obs=true;
+    try{ new MutationObserver(function(){ decorate(); }).observe(host,{childList:true}); }catch(e){}
+  }
+  if(host) decorate();
+  addToolbarButton();
+}
+if(typeof window.onShow==='function'){
+  var _show3=window.onShow;
+  window.onShow=function(pg){ var r=_show3.apply(this,arguments); if(pg==='printers'||pg==='settings') setTimeout(ensureObserver,60); return r; };
+}
+setTimeout(ensureObserver,2300);
+setInterval(ensureObserver,4000);
+console.log('🖨️ [v32] Printer Management Pro ready (enable/disable, duplicate, IP printers, unified assign)');
+})();
+</script>
+
+<script id="v32-backup-center">
+/* ═══════════════════════════════════════════════════════════════════
+   JAY AMBE POS v32 — BACKUP CENTER
+   Mojood v25 rolling auto-backup (5-min, 50 snapshots) ko ek asli
+   screen deta hai: One-Click Backup, history list (date-wise), Restore
+   with validation + progress, aur file-upload restore bhi same checks
+   se guzarta hai.
+   ═══════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+if(window.__v32BackupCenter) return; window.__v32BackupCenter=true;
+
+function fmtDate(ts){ var d=new Date(ts); return d.toLocaleDateString('en-IN')+' '+d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}); }
+function toastSafe(m,t){ try{ if(typeof toast==='function') return toast(m,t); }catch(e){} }
+function index(){ try{ return JSON.parse(localStorage.getItem('v25_backups_index'))||[]; }catch(e){ return []; } }
+
+function render(){
+  var host=document.getElementById('v23-backup-log'); if(!host) return;
+  var list=index();
+  var html='<div style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 12px">'+
+    '<button type="button" class="btn btn-brand btn-sm" onclick="JABK.backupNow()">⚡ One-Click Backup Now</button>'+
+    '</div>';
+  if(!list.length){
+    html+='<div style="color:var(--muted,#8a949e);font-size:12.5px">Koi automatic backup abhi tak nahi bana — app kuch der chalne ke baad ya "Backup Now" dabane par yaha dikhega.</div>';
+  } else {
+    html+='<div style="font-size:11px;font-weight:800;color:var(--muted,#8a949e);text-transform:uppercase;margin-bottom:6px">📅 Backup History (last '+list.length+')</div>'+
+      '<div style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:6px">'+
+      list.map(function(b){
+        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1.5px solid var(--line,#e3e8ee);border-radius:10px">'+
+          '<div style="flex:1"><b style="font-size:12.5px">'+fmtDate(b.ts)+'</b><br>'+
+          '<span style="font-size:11px;color:var(--muted,#8a949e)">'+(b.menu||0)+' menu items · '+(b.orders||0)+' bills</span></div>'+
+          '<button type="button" class="btn btn-ghost btn-sm" onclick="JABK.restore('+b.ts+')">♻️ Restore</button>'+
+          '<button type="button" class="btn btn-ghost btn-sm" onclick="JABK.download('+b.ts+')">⬇️</button>'+
+        '</div>';
+      }).join('')+
+      '</div>';
+  }
+  host.innerHTML=html;
+}
+
+function progressOverlay(msg){
+  var ov=document.createElement('div'); ov.id='v32bk-progress';
+  ov.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(10,26,20,.75);display:flex;align-items:center;justify-content:center';
+  ov.innerHTML='<div style="background:var(--card,#fff);border-radius:16px;padding:28px 34px;text-align:center;min-width:220px">'+
+    '<div id="v32bk-emoji" style="font-size:32px;margin-bottom:10px">♻️</div>'+
+    '<div id="v32bk-msg" style="font-weight:800;font-size:14px;color:var(--ink,#1a2b23)">'+msg+'</div>'+
+    '<div style="margin-top:14px;height:6px;border-radius:99px;background:var(--soft,#f2f5f7);overflow:hidden">'+
+      '<div style="height:100%;width:40%;background:linear-gradient(135deg,var(--brand,#0a9e5c),#077a57);animation:v32bkbar .9s ease-in-out infinite"></div>'+
+    '</div></div><style>@keyframes v32bkbar{0%{margin-left:-40%}100%{margin-left:100%}}</style>';
+  document.body.appendChild(ov);
+  return ov;
+}
+
+function validateAndRestore(data,label){
+  var curOrders=(typeof state!=='undefined'&&state.orders)?state.orders.length:0;
+  var curMenu=(typeof state!=='undefined'&&state.menu)?state.menu.length:0;
+  var newOrders=(data.orders||[]).length, newMenu=(data.menu||[]).length;
+  var warn='';
+  if(curOrders>5&&newOrders===0) warn+='\n⚠️ Is backup me 0 bills hain lekin abhi '+curOrders+' hain — bahut purana lag raha hai.';
+  if(curMenu>0&&newMenu===0) warn+='\n⚠️ Is backup me menu khaali hai.';
+  var msg='Restore: '+label+'\nMenu: '+newMenu+' items, Bills: '+newOrders+'\n'+warn+'\nAbhi ka data is backup se replace ho jayega. Continue?';
+  if(!confirm(msg)) return;
+  var ov=progressOverlay('Restore ho raha hai…');
+  setTimeout(function(){
+    try{
+      applyBackup(data);
+      var e1=document.getElementById('v32bk-emoji'), m1=document.getElementById('v32bk-msg');
+      if(e1) e1.textContent='✅'; if(m1) m1.textContent='Restore complete!';
+      setTimeout(function(){ ov.remove(); toastSafe('✅ Backup restore ho gaya'); render(); },700);
+    }catch(e){ ov.remove(); toastSafe('❌ Restore fail: backup file sahi nahi hai','error'); }
+  },350);
+}
+
+window.JABK={
+  backupNow:function(){
+    try{ if(typeof v25AutoBackup==='function') v25AutoBackup(); }catch(e){}
+    if(typeof downloadBackupFixed==='function') downloadBackupFixed(); else toastSafe('⚡ Backup ban gaya');
+    render();
+  },
+  restore:function(ts){
+    var raw=localStorage.getItem('v25_backup_'+ts);
+    if(!raw){ toastSafe('❌ Backup data nahi mila (bahut purana ho sakta hai)','error'); return; }
+    var data; try{ data=JSON.parse(raw); }catch(e){ toastSafe('❌ Backup corrupt hai','error'); return; }
+    validateAndRestore(data,fmtDate(ts));
+  },
+  download:function(ts){
+    var raw=localStorage.getItem('v25_backup_'+ts);
+    if(!raw){ toastSafe('❌ Backup data nahi mila','error'); return; }
+    var blob=new Blob([raw],{type:'application/json'});
+    var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='JayAmbe_Backup_'+ts+'.json'; a.click();
+  }
+};
+
+if(typeof window.restoreBackup==='function'){
+  window.restoreBackup=function(ev){
+    var f=ev.target.files[0]; if(!f) return;
+    var r=new FileReader();
+    r.onload=function(){
+      var d; try{ d=JSON.parse(r.result); }catch(e){ toastSafe('❌ File sahi nahi hai','error'); ev.target.value=''; return; }
+      if(!d||!d.menu||!d.orders){ toastSafe('❌ Ye Jay Ambe POS backup file nahi lagti','error'); ev.target.value=''; return; }
+      validateAndRestore(d,f.name);
+      ev.target.value='';
+    };
+    r.readAsText(f);
+  };
+}
+
+if(typeof window.onShow==='function'){
+  var _show5=window.onShow;
+  window.onShow=function(pg){ var r=_show5.apply(this,arguments); if(pg==='settings') setTimeout(render,150); return r; };
+}
+setTimeout(render,2000);
+console.log('🗄️ [v32] Backup Center ready (one-click backup/restore, history, validation, progress)');
+})();
+</script>
+
+<script id="v32-factory-reset-sync">
+/* ═══════════════════════════════════════════════════════════════════
+   JAY AMBE POS v32 — FACTORY RESET, LAN-WIDE
+   Security Center's Factory Reset only ever cleared THIS browser's
+   localStorage; on a LAN setup the shared server file kept the old
+   menu/orders/printers, so a wiped device could silently re-sync stale
+   data back in. This block also clears data/lan-state.json (via the
+   server) and tells every other connected device to reload clean.
+   ═══════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+if(window.__v32FactoryResetSync) return; window.__v32FactoryResetSync=true;
+var url=new URLSearchParams(location.search);
+if(url.get('role')==='menu'||url.get('menu')==='1') return;
+var origin=(/^https?:$/.test(location.protocol))?location.origin:'';
+
+function wrapIt(){
+  if(!window.JASEC||!JASEC._p||typeof JASEC._p.factoryReset!=='function'||JASEC._p.factoryReset.__v32Wrapped) return false;
+  var _orig=JASEC._p.factoryReset;
+  var wrapped=function(){
+    if(origin){ try{ fetch(origin+'/api/factory-reset',{method:'POST'}).catch(function(){}); }catch(e){} }
+    return _orig.apply(this,arguments);
+  };
+  wrapped.__v32Wrapped=true;
+  JASEC._p.factoryReset=wrapped;
+  return true;
+}
+var tries=0, iv=setInterval(function(){ if(wrapIt()||++tries>40) clearInterval(iv); },250);
+
+/* other devices: when the server broadcasts factory-reset, clear local + reload */
+if(origin && window.EventSource){
+  try{
+    var es=new EventSource(origin+'/api/events');
+    es.addEventListener('factory-reset',function(){
+      try{ localStorage.clear(); }catch(e){}
+      alert('🧨 Factory Reset kisi doosre device se hua — ye device bhi fresh restart hoga.');
+      location.reload();
+    });
+  }catch(e){}
+}
+console.log('🧨 [v32] Factory Reset now clears the shared LAN state too');
+})();
+</script>
+
+<script id="v32-print-guard">
+/* ═══════════════════════════════════════════════════════════════════
+   JAY AMBE POS v32 — PRINT GUARD (sabse bahar wali layer)
+   - Partition-specific printer override (agar set hai)
+   - Disabled printer par bhejna rokta hai (Printer Center → toggle)
+   Configured nahi hai to bilkul silently purani (v31) chain chalti hai.
+   ═══════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+if(window.__v32PrintGuard) return; window.__v32PrintGuard=true;
+var origin=(/^https?:$/.test(location.protocol))?location.origin:'';
+function toastSafe(m,t){ try{ if(typeof toast==='function') return toast(m,t); }catch(e){} }
+function partMap(){ try{ return JSON.parse(localStorage.getItem('ja_v32_partmap'))||{}; }catch(e){ return {}; } }
+function meta(){ try{ var m=JSON.parse(localStorage.getItem('ja_v31_printers'))||{}; m.meta=m.meta||{}; return m; }catch(e){ return {meta:{}}; } }
+function isEnabled(p){ var mm=meta().meta[p]; return !mm||mm.enabled!==false; }
+function friendly(p){ try{ var c=JSON.parse(localStorage.getItem('ja29_printcfg'))||{}; return (c.names&&c.names[p])||p; }catch(e){ return p; } }
+function pw(p){ try{ return (window.v31PrinterWidth&&v31PrinterWidth(p))||32; }catch(e){ return 32; } }
+function send(p,content,copies){
+  return fetch(origin+'/api/print',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({printer:p,content:content,copies:copies||1})}).then(function(r){return r.json();});
+}
+function ticket(id){
+  try{
+    if(typeof v22State!=='undefined'&&v22State&&v22State.kotOrders){ var k=v22State.kotOrders.find(function(t){return t.id===id;}); if(k) return k; }
+    if(typeof state!=='undefined'&&state.kotTickets) return state.kotTickets.find(function(t){return t.id===id;});
+  }catch(e){}
+  return null;
+}
+function orderOf(k){ try{ return state.orders.find(function(o){return o.id===(k.orderId||'');})||null; }catch(e){ return null; } }
+
+if(typeof window.printKOT==='function'){
+  var _pk2=window.printKOT;
+  window.printKOT=function(id){
+    try{
+      if(origin){
+        var k=ticket(id), po=k?orderOf(k):null;
+        var table=k?(k.table||k.train||k.trainNo):null;
+        var partition=po?(po.partition||''):'';
+        if(table!=null && partition){
+          var p=window.v32PartitionPrinter?v32PartitionPrinter(String(table),partition):'';
+          if(p){
+            if(!isEnabled(p)){ toastSafe('⚠️ '+friendly(p)+' disabled hai — KOT nahi gaya (Printer Center check karo)','error'); return; }
+            var order={ id:(po&&po.id)||k.orderId||k.id, train:String(table)+' - '+partition, time:k.time||new Date(k.ts||Date.now()).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}), orderType:k.orderType, waiter:(po&&po.coach)||k.coach||'', billerName:(po&&po.billerName)||'' };
+            var w=pw(p);
+            var text=(window.v31BuildKotText)?window.v31BuildKotText(order,friendly(p),k.items||[],w):null;
+            if(text){
+              send(p,text,1).then(function(j){ if(j&&j.ok) toastSafe('🖨️ KOT → '+friendly(p)+' ('+order.train+')'); else toastSafe('❌ KOT fail: '+((j&&j.error)||'?'),'error'); }).catch(function(){ toastSafe('❌ KOT print fail','error'); });
+              return;
+            }
+          }
+        }
+      }
+    }catch(e){ try{ console.warn('v32 printKOT guard err',e); }catch(e2){} }
+    return _pk2.apply(this,arguments);
+  };
+}
+if(typeof window.printBill==='function'){
+  var _pb2=window.printBill;
+  window.printBill=function(order){
+    try{
+      if(origin && order){
+        var partition=order.partition||'';
+        if(partition && order.train!=null){
+          var p=window.v32PartitionPrinter?v32PartitionPrinter(String(order.train),partition):'';
+          if(p && !isEnabled(p)){ toastSafe('⚠️ '+friendly(p)+' disabled hai — Bill nahi gaya (Printer Center check karo)','error'); return; }
+          if(p && window.v31BuildBillText){
+            var w=pw(p);
+            var clone={}; for(var k2 in order) clone[k2]=order[k2]; clone.trainName=(order.trainName?order.trainName+' · ':'')+'Sec '+partition;
+            var text=window.v31BuildBillText(clone,w,false);
+            send(p,text,1).then(function(j){ if(j&&j.ok) toastSafe('🧾 Bill → '+friendly(p)); else toastSafe('❌ Bill fail: '+((j&&j.error)||'?'),'error'); }).catch(function(){ toastSafe('❌ Bill print fail','error'); });
+            return;
+          }
+        }
+      }
+    }catch(e){ try{ console.warn('v32 printBill guard err',e); }catch(e2){} }
+    return _pb2.apply(this,arguments);
+  };
+}
+/* ── universal disabled-printer gate — sits outermost around window.fetch,
+   so EVERY print path (v25 popup-free server path, v28, v29, v31, this file)
+   gets blocked the same way the instant a printer is toggled off. ── */
+(function(){
+  var _fetchForPrint=window.fetch;
+  if(!_fetchForPrint) return;
+  window.fetch=function(input,init){
+    try{
+      var url=(typeof input==='string')?input:(input&&input.url)||'';
+      var method=(init&&init.method)||(input&&input.method)||'GET';
+      if(/\/api\/print(\?|$)/.test(url) && String(method).toUpperCase()==='POST'){
+        var bodyStr=(init&&typeof init.body==='string')?init.body:'';
+        var body=null; try{ body=JSON.parse(bodyStr); }catch(e){}
+        var printer=body&&body.printer;
+        if(printer && !isEnabled(printer)){
+          toastSafe('⛔ '+friendly(printer)+' disabled hai — print bheja nahi gaya','error');
+          return Promise.resolve(new Response(JSON.stringify({ok:false,error:'printer disabled'}),{status:200,headers:{'Content-Type':'application/json'}}));
+        }
+      }
+    }catch(e){}
+    return _fetchForPrint(input,init);
+  };
+})();
+console.log('🛡️ [v32] Print Guard ready (partition override + universal disabled-printer gate)');
 })();
 </script>
 </body>

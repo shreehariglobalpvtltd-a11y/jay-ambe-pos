@@ -16,6 +16,7 @@ var fs   = require('fs');
 var path = require('path');
 var os   = require('os');
 var cp   = require('child_process');
+var net  = require('net');
 
 var PORT = parseInt(process.env.PORT || process.argv[2] || '3000', 10);
 var ROOT = __dirname;
@@ -253,10 +254,33 @@ function listPrinters(cb) {
   }
 }
 
+/* ── Raw TCP printing (network/IP thermal printers, e.g. 192.168.1.50:9100) ── */
+function printRaw(host, port, content, copies, cb) {
+  var buf = Buffer.from(String(content || ''), 'utf8');
+  var sent = 0, failed = false;
+  function one() {
+    var sock = net.connect({ host: host, port: port });
+    var done = false;
+    sock.setTimeout(6000);
+    function finish(ok, err) {
+      if (done) return; done = true;
+      try { sock.destroy(); } catch (e) {}
+      if (!ok) { if (!failed) { failed = true; cb(false, err || 'raw print failed'); } return; }
+      sent++; if (sent === copies && !failed) cb(true);
+    }
+    sock.on('connect', function () { sock.write(buf, function () { finish(true); }); });
+    sock.on('timeout', function () { finish(false, 'connection timeout: ' + host + ':' + port); });
+    sock.on('error', function (e) { finish(false, e.message); });
+  }
+  for (var i = 0; i < copies; i++) one();
+}
+
 /* ── Print to a named printer (text receipt) ── */
 function printToPrinter(printer, content, copies, cb) {
   copies = Math.max(1, Math.min(5, parseInt(copies || 1, 10)));
   if (!printer) return cb(false, 'no printer');
+  var ipMatch = String(printer).trim().match(/^(\d{1,3}(?:\.\d{1,3}){3}):(\d{1,5})$/);
+  if (ipMatch) return printRaw(ipMatch[1], parseInt(ipMatch[2], 10), content, copies, cb);
   if (!IS_WIN) {  // CUPS
     var tmpN = path.join(os.tmpdir(), 'ja_print_' + Date.now() + '.txt');
     try { fs.writeFileSync(tmpN, content || ''); } catch (e) { return cb(false, 'tmp write'); }
@@ -444,6 +468,16 @@ var server = http.createServer(function (req, res) {
       state.config = Object.assign(state.config, body.config); saveState(); broadcast('config', state.config);
       sendJSON(res, 200, { ok: true, config: state.config });
     });
+  }
+
+  // v32: clear the SHARED LAN state together with a device's own Factory
+  // Reset, so every connected phone/PC starts fresh instead of a wiped
+  // browser silently re-syncing stale menu/orders back from the server.
+  if (p === '/api/factory-reset' && req.method === 'POST') {
+    state.menu = []; state.orders = []; state.tables = {}; state.config = {}; state.mobileOrders = [];
+    saveState();
+    broadcast('factory-reset', {});
+    return sendJSON(res, 200, { ok: true });
   }
 
   /* v28p4 Phase 7: GET /api/backup — full state snapshot as downloadable JSON.
