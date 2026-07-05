@@ -5,7 +5,7 @@ cd /d "%~dp0"
 
 echo.
 echo   ================================================
-echo     JAY AMBE POS  v31  -  INSTALLER
+echo     JAY AMBE POS  -  INSTALLER
 echo     (naye computer par bas ISI ko ek baar chalao)
 echo   ================================================
 echo.
