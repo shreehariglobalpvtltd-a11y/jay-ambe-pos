@@ -6,7 +6,7 @@ A simple billing app that runs in any browser. No installation, no server.
 
 - **On your computer:** double-click `index.html`. It opens in Chrome or Edge.
 - **Online (GitHub Pages):** in the GitHub repository go to *Settings → Pages*, choose
-  *Deploy from a branch*, branch `main`, folder `/ (root)`. The app will then be at
+  *Deploy from a branch*, branch `master`, folder `/ (root)`. The app will then be at
   `https://<your-account>.github.io/jay-ambe-pos/web/`.
 
 ## Daily use
