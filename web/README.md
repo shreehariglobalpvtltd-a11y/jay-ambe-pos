@@ -41,4 +41,4 @@ Tip: starting Chrome with `--kiosk-printing` prints straight away without the pr
 | `index.html` | The screens (tables, order, bills, baki, menu, settings) |
 | `style.css` | How it looks, including the printed bill layout |
 | `app.js` | All the logic: orders, payments, baki, printing, saving |
-| `default-menu.js` | The starting menu, used only the first time |
+| `default-menu.js` | The restaurant menu (250 items from menu.pdf). Used the first time, and by **Menu → Reset to restaurant menu** |

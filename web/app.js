@@ -27,12 +27,19 @@ function freshState() {
   };
 }
 
+// Ids of the 12-item sample menu that earlier versions started with
+const SAMPLE_MENU_IDS = 'm1,m2,m3,m4,m5,m6,m7,m8,m9,m10,m11,m12';
+
 function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
     if (saved && saved.menu) {
       // Fill in any setting added in a newer version of the app
       saved.settings = { ...freshState().settings, ...saved.settings };
+      // Devices that started with the old 12-item sample menu get the real menu
+      if (saved.menu.map(m => m.id).join(',') === SAMPLE_MENU_IDS) {
+        saved.menu = DEFAULT_MENU.map(m => ({ ...m }));
+      }
       return saved;
     }
   } catch (e) {
@@ -457,6 +464,13 @@ $('#menu-body').addEventListener('click', e => {
   const m = state.menu.find(x => x.id === b.dataset.del);
   if (!confirm('Delete ' + m.name + ' from the menu?')) return;
   state.menu = state.menu.filter(x => x !== m);
+  save();
+  renderMenu();
+});
+
+$('#menu-reset').addEventListener('click', () => {
+  if (!confirm('Replace the whole menu with the restaurant menu? Your own changes to the menu will be lost.')) return;
+  state.menu = DEFAULT_MENU.map(m => ({ ...m }));
   save();
   renderMenu();
 });
