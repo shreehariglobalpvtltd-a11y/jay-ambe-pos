@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jay Ambe POS</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Top bar: the app name and the main tabs -->
+  <header class="topbar no-print">
+    <div class="brand" id="brand-name">Jay Ambe POS</div>
+    <nav class="tabs">
+      <button data-view="tables" class="active">Tables</button>
+      <button data-view="bills">Bills</button>
+      <button data-view="baki">Baki</button>
+      <button data-view="menu">Menu</button>
+      <button data-view="settings">Settings</button>
+    </nav>
+  </header>
+
+  <main class="no-print">
+    <!-- 1. Tables: one box per table. Green = free, orange = has an order -->
+    <section id="view-tables" class="view active">
+      <h2>Dine-in tables</h2>
+      <div id="table-grid" class="table-grid"></div>
+      <h2>Parcel / Takeaway</h2>
+      <div id="parcel-grid" class="table-grid"></div>
+    </section>
+
+    <!-- 2. Order screen: categories | items | cart -->
+    <section id="view-order" class="view">
+      <div class="order-head">
+        <button id="back-to-tables" class="btn">&larr; Tables</button>
+        <h2 id="order-title">Table</h2>
+        <input id="item-search" type="search" placeholder="Search item...">
+      </div>
+      <div class="order-layout">
+        <aside id="cat-list" class="cat-list"></aside>
+        <div id="item-grid" class="item-grid"></div>
+        <div class="cart">
+          <div id="cart-items" class="cart-items"></div>
+          <div class="cart-total">Total <span id="cart-total">₹0</span></div>
+          <div class="cart-actions">
+            <button id="btn-clear" class="btn danger">Clear</button>
+            <button id="btn-print-draft" class="btn">Print Bill</button>
+            <button id="btn-settle" class="btn primary">Settle &amp; Pay</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Bills: history of settled bills, with reprint -->
+    <section id="view-bills" class="view">
+      <div class="row">
+        <h2>Bills</h2>
+        <label>Date <input id="bills-date" type="date"></label>
+      </div>
+      <div id="bills-summary" class="summary"></div>
+      <table class="list"><thead><tr>
+        <th>Bill</th><th>Time</th><th>Table</th><th>Total</th><th>Cash</th><th>Online</th><th>Card</th><th>Baki</th><th></th>
+      </tr></thead><tbody id="bills-body"></tbody></table>
+    </section>
+
+    <!-- 4. Baki: customers who still owe money -->
+    <section id="view-baki" class="view">
+      <h2>Baki (pending balance)</h2>
+      <table class="list"><thead><tr>
+        <th>Customer</th><th>Phone</th><th>Baki</th><th></th>
+      </tr></thead><tbody id="baki-body"></tbody></table>
+    </section>
+
+    <!-- 5. Menu editor -->
+    <section id="view-menu" class="view">
+      <h2>Menu</h2>
+      <form id="menu-form" class="row">
+        <input name="name" placeholder="Item name" required>
+        <input name="cat" placeholder="Category" list="cat-options" required>
+        <datalist id="cat-options"></datalist>
+        <input name="price" type="number" min="0" step="0.01" placeholder="Price" required>
+        <button class="btn primary">Add item</button>
+      </form>
+      <table class="list"><thead><tr>
+        <th>Item</th><th>Category</th><th>Price</th><th></th>
+      </tr></thead><tbody id="menu-body"></tbody></table>
+    </section>
+
+    <!-- 6. Settings: shop details on the bill, table count, backup -->
+    <section id="view-settings" class="view">
+      <h2>Settings</h2>
+      <form id="settings-form" class="settings">
+        <label>Shop name <input name="shopName"></label>
+        <label>Address <input name="address"></label>
+        <label>Phone <input name="phone"></label>
+        <label>GSTIN <input name="gstin"></label>
+        <label>GST % <input name="taxPercent" type="number" min="0" step="0.01"></label>
+        <label>Number of tables <input name="tableCount" type="number" min="1" max="200"></label>
+        <label>Number of parcel slots <input name="parcelCount" type="number" min="0" max="50"></label>
+        <label>Bill paper width
+          <select name="paperWidth"><option value="80">80 mm</option><option value="58">58 mm</option></select>
+        </label>
+        <label>Bill footer <input name="footer"></label>
+        <button class="btn primary">Save settings</button>
+      </form>
+      <h3>Backup</h3>
+      <p>All data is saved only in this browser. Download a backup file regularly.</p>
+      <div class="row">
+        <button id="btn-export" class="btn">Download backup</button>
+        <label class="btn">Restore backup <input id="import-file" type="file" accept=".json" hidden></label>
+      </div>
+    </section>
+  </main>
+
+  <!-- Payment pop-up -->
+  <dialog id="pay-dialog">
+    <form method="dialog" id="pay-form">
+      <h2>Settle bill <span id="pay-table"></span></h2>
+      <div class="pay-grid">
+        <label>Discount ₹ <input name="discount" type="number" min="0" step="0.01" value="0"></label>
+        <div class="pay-totals" id="pay-totals"></div>
+      </div>
+      <p class="hint">Type how much came in each way. A bill can be split, for example part cash and part online.</p>
+      <div class="quick">
+        <button type="button" data-all="cash" class="btn">All Cash</button>
+        <button type="button" data-all="online" class="btn">All Online</button>
+        <button type="button" data-all="card" class="btn">All Card</button>
+        <button type="button" data-all="baki" class="btn">All Baki</button>
+      </div>
+      <div class="pay-grid">
+        <label>Cash <input name="cash" type="number" min="0" step="0.01" value="0"></label>
+        <label>Online / UPI <input name="online" type="number" min="0" step="0.01" value="0"></label>
+        <label>Card <input name="card" type="number" min="0" step="0.01" value="0"></label>
+      </div>
+      <div id="pay-baki" class="pay-baki"></div>
+      <div id="pay-customer" class="pay-grid">
+        <label>Customer name <input name="custName" list="cust-options"></label>
+        <label>Customer phone <input name="custPhone" type="tel"></label>
+        <datalist id="cust-options"></datalist>
+      </div>
+      <p id="pay-error" class="error"></p>
+      <div class="row end">
+        <button value="cancel" class="btn" formnovalidate>Cancel</button>
+        <button id="pay-confirm" value="ok" class="btn primary">Save &amp; Print</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Baki collection pop-up -->
+  <dialog id="collect-dialog">
+    <form method="dialog" id="collect-form">
+      <h2>Collect baki from <span id="collect-name"></span></h2>
+      <p>Pending: <b id="collect-due"></b></p>
+      <div class="pay-grid">
+        <label>Amount <input name="amount" type="number" min="0.01" step="0.01" required></label>
+        <label>Paid by
+          <select name="mode"><option value="cash">Cash</option><option value="online">Online</option><option value="card">Card</option></select>
+        </label>
+      </div>
+      <div id="collect-history"></div>
+      <div class="row end">
+        <button value="cancel" class="btn" formnovalidate>Cancel</button>
+        <button value="ok" class="btn primary">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- The bill that gets printed. Hidden on screen, the only thing shown when printing. -->
+  <div id="print-area"></div>
+
+  <script src="default-menu.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
