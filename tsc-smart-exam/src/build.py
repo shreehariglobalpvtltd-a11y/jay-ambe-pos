@@ -12,10 +12,12 @@ G = {"gk":"gk","cur":"gk","edu":"ed","psy":"ed","method":"ed","eval":"ed","ict":
 Q = {"gk":15,"ed":20,"ict":5,"law":5,"iq":5}
 mine = [p["key"] for p in PAP if p["mine"] and not p["guess"]]
 pool = [q for q in db if q.get("set") in ("A","B") and q.get("p") == "H"] + \
+       [q for q in REAL if q["paper"] in ("uA","uB")] + \
        [q for k in mine for q in REAL if q["paper"] == k and q.get("conf") == "high" and not q.get("fig")] + \
        [q for q in db if q.get("set") in ("A","B") and q.get("p") == "M"]
 used = set(); IMP = []
-for i in range(3):
+for i in range(12):
+    if len([q for q in pool if q["id"] not in used]) < 20: break
     ids = []
     for g, n in Q.items():
         c = [q for q in pool if q["id"] not in used and G.get(q["t"], "gk") == g][:n]

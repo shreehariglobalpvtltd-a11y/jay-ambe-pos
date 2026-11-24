@@ -33,7 +33,7 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Mukta,"Noto Sans Devanagari","Kohinoor Devanagari",system-ui,sans-serif;font-size:17px;line-height:1.6}
 button{font:inherit;cursor:pointer;border:0}
-.wrap{max-width:860px;margin:0 auto;padding-block:0 96px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:860px;margin:0 auto;padding-block:0 110px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 header.top{background:linear-gradient(120deg,var(--blue),var(--purple));color:#fff;padding:14px 16px;position:sticky;top:env(safe-area-inset-top,0px);z-index:20;box-shadow:0 4px 18px rgba(79,70,229,.35)}
 header.top .in{max-width:860px;margin:0 auto;display:flex;align-items:center;gap:10px}
 .brand{font-weight:700;font-size:1.05rem;flex:1;line-height:1.2}
@@ -158,6 +158,17 @@ select{font:inherit;padding:8px 10px;border-radius:12px;border:1px solid var(--l
 .fbk{margin-top:10px;padding:10px 14px;border-radius:14px;font-weight:700;font-size:1.05rem;animation:slide .25s}.fbk.ok{background:var(--okbg);color:var(--ok)}.fbk.bad{background:var(--badbg);color:var(--bad)}
 .howto{font-size:.85rem;margin-top:8px!important;background:rgba(255,255,255,.15);padding:8px 10px;border-radius:12px}
 .likely{display:inline-block;background:linear-gradient(90deg,#f97316,#f59e0b);color:#fff;font-weight:700;font-size:.78rem;padding:2px 10px;border-radius:99px;margin-bottom:4px}
+.bnav{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;background:var(--card);border-top:1px solid var(--line);padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));box-shadow:0 -6px 20px rgba(79,70,229,.12)}
+.bnav button{flex:1;background:none;color:var(--muted);font-size:.72rem;display:flex;flex-direction:column;align-items:center;gap:1px;padding:4px 0;border-radius:12px}
+.bnav button span{font-size:1.35rem}.bnav button.on{color:var(--purple);background:var(--sel);font-weight:700}
+.vipbtn{display:flex;align-items:center;gap:12px;width:100%;text-align:left;margin:14px 0 4px;padding:14px 16px;border-radius:20px;color:#fff;background:linear-gradient(120deg,#f97316,#db2777 55%,#7c3aed);box-shadow:0 10px 26px rgba(219,39,119,.3)}
+.vipbtn>span{font-size:1.8rem}.vipbtn div{flex:1}.vipbtn b{font-size:1.1rem}.vipbtn small{display:block;opacity:.92}
+.vip{background:linear-gradient(120deg,#fff7ed,#fde68a);color:#1e1b4b;border-radius:16px;padding:12px 14px;margin:14px 0 10px}
+.nlist{display:flex;flex-direction:column;gap:6px}.note1{display:flex;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+.nn{min-width:28px;height:28px;border-radius:50%;background:var(--sel);color:var(--purple);font-weight:700;display:grid;place-items:center;font-size:.8rem}
+.nq{font-size:.92rem;color:var(--muted);line-height:1.45}.na{font-weight:700;margin-top:2px}.lowf{font-size:.72rem;color:var(--skip);font-weight:400}
+.steps{text-align:left;padding-left:22px;line-height:1.9}.steps li{margin:4px 0}
+.exbar .l1{gap:10px}
 .pill{font-size:.72rem;padding:1px 8px;border-radius:99px;font-weight:700}
 footer{text-align:center;font-size:.78rem;color:var(--muted);margin-top:30px}
 @media print{header.top,.noprint{display:none!important}.rv{break-inside:avoid}}
@@ -277,7 +288,7 @@ function finish(){
 
 /* ---------- views ---------- */
 const view={name:"home",result:null,filter:"all",topic:"const",guideSet:PAPERS.length?PAPERS[0].key:"A"};
-function render(name){ if(name)view.name=name; window.scrollTo(0,0); const f=V[view.name]||V.home; $("#app").innerHTML=f(); if(view.name==="exam")startTimer(); else stopTimer(); if(view.name==="result")setTimeout(animBars,60); }
+function render(name){ if(name)view.name=name; window.scrollTo(0,0); const f=V[view.name]||V.home; $("#app").innerHTML=f()+(view.name==="exam"?"":bottomNav()); try{const h=view.name==="home"?"":"#"+view.name; if(location.hash!==h){if(h)history.pushState(null,"",h);else history.replaceState(null,"",location.pathname+location.search)}}catch(e){} if(view.name==="exam")startTimer(); else stopTimer(); if(view.name==="result")setTimeout(animBars,60); }
 function topbar(title,back=true){
  return `<header class="top"><div class="in">${back?`<button class="iconbtn" onclick="render('home')" aria-label="गृहपृष्ठ">⌂</button>`:""}
  <div class="brand">${title}<small>${STUDENT.np} • TSC निम्नमाध्यमिक तृतीय श्रेणी</small></div>
@@ -301,6 +312,7 @@ V.home=()=>{
  ${c?`<div class="card" style="border-color:var(--orange)"><b>⏸ अधुरो परीक्षा (Resume): ${esc(c.title)}</b><div class="note">${NUM(Object.keys(c.ans).length)}/${NUM(c.ids.length)} उत्तर दिइएको</div>
   <div class="row" style="margin-top:8px"><button class="btn org" onclick="render('exam')">जारी राख्नुहोस् · Continue</button><button class="btn ghost" onclick="abandon()">रद्द · Cancel</button></div></div>`:""}
  ${last?`<div class="card" style="margin-top:12px"><div class="row" style="justify-content:space-between"><div><b>अन्तिम नतिजा (Last result):</b> ${esc(last.title)}<div class="note">${fmt(last.score)}/${NUM(last.fullMarks)} अंक • ${fmt(last.pct,1)}%</div></div><button class="btn" onclick="view.result=${last.id};render('result')">हेर्नुहोस् · View</button></div></div>`:""}
+ <button class="vipbtn" onclick="render('notes')"><span>📒</span><div><b>VIP Notes · सामान्य ज्ञान सार</b><small>सबै महत्त्वपूर्ण प्रश्नको उत्तर एक लाइनमा — पहिले यही पढ्नुहोस्</small></div><span>›</span></button>
  <h2 class="sec">⭐ Important सेट — सुरुमा यही गर्नुहोस्</h2>
  <p class="note" style="margin-top:-4px">पुराना निम्नमाध्यमिक प्रश्न र अनुमानित सेटबाट पाठ्यक्रमको भारअनुसार छानिएका सम्भावित महत्त्वपूर्ण प्रश्न।</p>
  <div class="plist">${imp.map(p=>row(p.key,"⭐",p.lv,"सम्भावित (Probable)",p.imp.length,"imp")).join("")}</div>
@@ -322,6 +334,13 @@ V.home=()=>{
 };
 const IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
 const STANDALONE=(window.navigator.standalone===true)||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches);
+function bottomNav(){const n=view.name;const it=(v,ic,l)=>`<button class="${n===v?"on":""}" onclick="render('${v}')"><span>${ic}</span>${l}</button>`;
+ return `<nav class="bnav">${it("home","🏠","Home")}${it("notes","📒","VIP Notes")}${it("guide","📖","पढ्ने")}${it("progress","📈","प्रगति")}</nav>`}
+function exitExam(){save();stopTimer();render("home");toast("परीक्षा सुरक्षित भयो — पछि ‘जारी राख्नुहोस्’ थिच्नुहोस्।")}
+function installIntro(){if(FRAMED||STANDALONE||S.introSeen)return;
+ modal(`<div style="text-align:center"><div style="font-size:3rem">📲</div><h2 style="margin:4px 0">संगीताको TSC एप Install गर्नुहोस्</h2><p class="note">Install गरेपछि होम स्क्रिनबाट एप जस्तै खुल्छ र अंक, इतिहास कहिल्यै मेटिँदैन।</p></div>
+ ${IOS?`<ol class="steps"><li><b>Safari</b> मा यो पेज खोल्नुहोस् (Chrome भए Safari मा खोल्नुहोस्)।</li><li>तलको <b>Share ⬆</b> बटन थिच्नुहोस्।</li><li>तल सरेर <b>“Add to Home Screen”</b> छान्नुहोस्।</li><li>माथि दायाँ <b>Add</b> थिच्नुहोस्। ✅</li></ol>`:`<ol class="steps"><li><b>Chrome</b> को माथि दायाँ <b>⋮</b> मेनु थिच्नुहोस्।</li><li><b>“Add to Home screen”</b> वा <b>“Install app”</b> छान्नुहोस्।</li><li><b>Install / Add</b> थिच्नुहोस्। ✅</li></ol>`}
+ <div class="row" style="justify-content:center"><button class="btn pri" onclick="S.introSeen=1;save();closeModal()">ठीक छ, बुझेँ · OK</button><button class="btn ghost" onclick="closeModal()">पछि · Later</button></div>`)}
 function installCard(){if(FRAMED||STANDALONE||S.hideInstall)return"";
  return `<div class="infobox"><b>📱 फोनमा एप बनाउनुहोस् (डाटा नमेटियोस् भनेर)</b><br>${IOS?"<b>iPhone:</b> Safari मा यो पेज खोल्नुहोस् → तलको Share ⬆ बटन → “Add to Home Screen” → Add।":"<b>Android:</b> Chrome को ⋮ मेनु → “Add to Home screen” / “Install app”।"}<br><span class="note">होम स्क्रिनको आइकनबाट खोल्दा अंक, इतिहास र Bookmark लामो समयसम्म सुरक्षित रहन्छन्।</span><div class="row" style="margin-top:6px"><button class="btn ghost" onclick="S.hideInstall=1;save();render()">ठीक छ, लुकाउनुहोस्</button></div></div>`}
 function backupCard(){if(!S.history.length)return"";const d=S.lastBackup?Math.floor((Date.now()-S.lastBackup)/864e5):null;if(d!==null&&d<7)return"";
@@ -349,7 +368,7 @@ V.exam=()=>{
  const c=S.current; if(!c) return V.home();
  const q=byId(c.ids[c.idx]); const n=c.ids.length; const done=Object.keys(c.ans).length;
  const a=c.ans[q.id];
- return `<div class="exbar"><div class="in"><div class="l1"><div><b>👩‍🏫 ${STUDENT.np}</b><div style="opacity:.85;font-size:.8rem">${esc(c.title)}</div></div><div id="tm" class="timer">${c.practice?"अभ्यास":clock(remaining())}</div></div>
+ return `<div class="exbar"><div class="in"><div class="l1"><button class="iconbtn" onclick="exitExam()" aria-label="Home">⌂</button><div style="flex:1"><b>👩‍🏫 ${STUDENT.np}</b><div style="opacity:.85;font-size:.8rem">${esc(c.title)}</div></div><div id="tm" class="timer">${c.practice?"अभ्यास":clock(remaining())}</div></div>
  <div class="prog"><i style="width:${done/n*100}%"></i></div><div style="font-size:.78rem;opacity:.9;margin-top:4px">${NUM(done)}/${NUM(n)} उत्तर दिइयो</div></div></div>
  <div class="wrap">
  <div class="qcard" key="${q.id}">
@@ -450,6 +469,14 @@ function expl(q){const P=q.paper?PAPERS.find(p=>p.key===q.paper):null;
  return `<div class="exp">${q.conf==="low"?`<p style="color:var(--skip)"><b>⚠ यो उत्तरमा पूर्ण निश्चित छैन — शिक्षक वा किताबसँग मिलाउनुहोस्।</b></p>`:""}<h4>✅ सही उत्तर किन सही?</h4><p>${esc(q.why)}</p>${q.wrong?`<h4>❌ अन्य विकल्प किन गलत?</h4><p>${esc(q.wrong)}</p>`:""}${q.tip?`<h4>💡 सम्झने सजिलो तरिका</h4><p>${esc(q.tip)}</p>`:""}
  <h4>📌 स्रोत</h4><p class="note">${P?`${P.guess?"अनुमानित प्रश्न":"वास्तविक प्रश्न"}: ${esc(P.year)} • ${esc(P.lv)} • ${esc(P.sub)} • प्रश्न नं. ${NUM(q.n)} • स्रोत: ${esc(P.src)} • उत्तर आधिकारिक कुञ्जी होइन`:(q.year?esc(q.year)+" साल • "+esc(q.src||""):(q.set?"२०८३ अनुमानित सेट "+q.set+" (अभ्यास प्रश्न) • "+esc(q.src||""):esc(q.src||"")))}</p></div>`}
 
+V.notes=()=>{const t=view.nt||"all",only=view.ns!==false;
+ const qs=DB.filter(q=>(t==="all"||q.t===t||(t==="gk"&&q.t==="cur"))&&(!only||LIKELY.has(q.id)));
+ const seen=new Set();const list=qs.filter(q=>{const k=q.q.slice(0,40);if(seen.has(k))return false;seen.add(k);return true});
+ const tabs=[["all","सबै"],["gk","सामान्य ज्ञान"],["const","संविधान/कानुन"],["edu","शिक्षा ऐन/नीति"],["psy","मनोविज्ञान"],["method","शिक्षण विधि"],["eval","पाठ्यक्रम/मूल्याङ्कन"],["ict","ICT"],["iq","IQ"]];
+ return topbar("📒 VIP Notes · सार")+`<div class="wrap"><div class="vip"><b>📒 VIP Notes — छोटो सार</b><br>सबै प्रश्नको सही उत्तर एक लाइनमा। परीक्षाअघि यो मात्र पढे पनि पुग्छ। ⭐ = सम्भावित।</div>
+ <div class="tabs">${tabs.map(([k,l])=>`<button class="${t===k?"on":""}" onclick="view.nt='${k}';render('notes')">${l}</button>`).join("")}</div>
+ <div class="row" style="margin:8px 0"><button class="btn ${only?"org":"ghost"} sm" onclick="view.ns=${!only};render('notes')">${only?"⭐ सम्भावित मात्र":"सबै देखाउँदै"} · ${NUM(list.length)}</button></div>
+ <div class="nlist">${list.map((q,i)=>`<div class="note1"><span class="nn">${NUM(i+1)}</span><div><div class="nq">${esc(q.q).replace(/\n/g," ")}</div><div class="na">✅ ${esc(q.o[q.a])}${q.conf==="low"?' <span class="lowf">⚠ जाँच्नुहोस्</span>':""}</div></div></div>`).join("")}</div></div>`};
 V.topics=()=>topbar("विषयअनुसार परीक्षा")+`<div class="wrap"><h2 class="sec">विषय छान्नुहोस्</h2><div class="modes">
  ${Object.keys(TOPICS).map(t=>{const n=allQ().filter(q=>q.t===t).length;return n?mode("●",TCOL[t],TOPICS[t],NUM(n)+" प्रश्न",`startTopic('${t}')`):""}).join("")}</div>
  <div class="infobox">समसामयिक विषयका प्रश्न अनलाइन स्रोतबाट ताजा रूपमा प्रमाणित गर्न नसकिएकाले राखिएका छैनन् — परीक्षाअघि पत्रपत्रिका र आयोगको सूचना पढ्नुहोस्।</div></div>`;
@@ -542,7 +569,9 @@ function confetti(){const c=$("#confetti"),x=c.getContext("2d");c.width=innerWid
  (function loop(){x.clearRect(0,0,c.width,c.height);P.forEach(p=>{p.y+=p.vy;p.x+=p.vx;p.a+=.1;x.fillStyle=p.c;x.save();x.translate(p.x,p.y);x.rotate(p.a);x.fillRect(-p.r/2,-p.r/2,p.r,p.r*.6);x.restore()});if(++f<220)requestAnimationFrame(loop);else x.clearRect(0,0,c.width,c.height)})()}
 document.addEventListener("visibilitychange",()=>{if(document.hidden&&S.current)save()});
 /*PWA_SW*/
+window.addEventListener("popstate",()=>{closeModal();const h=location.hash.slice(1);if(!h||!V[h]||(h==="exam"&&!S.current)||(h==="result"&&!getRes()))render("home");else{view.name=h;window.scrollTo(0,0);$("#app").innerHTML=V[h]()+(h==="exam"?"":bottomNav());if(h==="exam")startTimer();else stopTimer()}});
 render("home");
+setTimeout(installIntro,400);
 /* localStorage खाली भेटिए IndexedDB को प्रतिबाट डाटा फिर्ता */
 idbGet().then(t=>{if(!t)return;try{const v=JSON.parse(t);const mine=(S.history||[]).length,theirs=(v.history||[]).length;
  if(theirs>mine||(!S.current&&v.current&&theirs>=mine)){S=Object.assign(S,v);try{localStorage.setItem(KEY,t)}catch(e){}if(view.name==="home")render("home")}else if(mine)idbPut(JSON.stringify(S))}catch(e){}});
