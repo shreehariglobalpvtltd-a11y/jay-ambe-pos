@@ -157,6 +157,7 @@ select{font:inherit;padding:8px 10px;border-radius:12px;border:1px solid var(--l
 .opt.ok{border-color:var(--ok);background:var(--okbg);font-weight:700}.opt.bad{border-color:var(--bad);background:var(--badbg)}.opt:disabled{opacity:1;cursor:default}
 .fbk{margin-top:10px;padding:10px 14px;border-radius:14px;font-weight:700;font-size:1.05rem;animation:slide .25s}.fbk.ok{background:var(--okbg);color:var(--ok)}.fbk.bad{background:var(--badbg);color:var(--bad)}
 .howto{font-size:.85rem;margin-top:8px!important;background:rgba(255,255,255,.15);padding:8px 10px;border-radius:12px}
+.likely{display:inline-block;background:linear-gradient(90deg,#f97316,#f59e0b);color:#fff;font-weight:700;font-size:.78rem;padding:2px 10px;border-radius:99px;margin-bottom:4px}
 .pill{font-size:.72rem;padding:1px 8px;border-radius:99px;font-weight:700}
 footer{text-align:center;font-size:.78rem;color:var(--muted);margin-top:30px}
 @media print{header.top,.noprint{display:none!important}.rv{break-inside:avoid}}
@@ -169,6 +170,8 @@ footer{text-align:center;font-size:.78rem;color:var(--muted);margin-top:30px}
 "use strict";
 const DB = __DB__;
 const PAPERS = __PAPERS__;
+const LIKELY = new Set(PAPERS.flatMap(p=>p.imp||[]));
+const star = q => LIKELY.has(q.id)?`<span class="likely">⭐ सम्भावित · Likely</span>`:"";
 const FRAMED = (()=>{try{return window.self!==window.top}catch(e){return true}})();
 const STUDENT = {np:"संगीता सुनार", en:"Sangita Sunar"};
 /* आधिकारिक ढाँचा (स्रोत: स्रोत प्रतिवेदन हेर्नुहोस्) */
@@ -349,7 +352,7 @@ V.exam=()=>{
  <div class="wrap">
  <div class="qcard" key="${q.id}">
   <div class="qmeta"><span>प्रश्न <b>${NUM(c.idx+1)}</b> / ${NUM(n)} • ${TOPICS[q.t]||""}</span><span>अंक: ${NUM(RULE.mark)} <button class="bm" onclick="toggleBm('${q.id}')" aria-label="Bookmark">${S.bm[q.id]?"★":"☆"}</button></span></div>
-  <div class="qtext">${esc(q.q).replace(/\n/g,"<br>")}</div>${q.fig?`<img class="fig" src="${q.fig}" alt="प्रश्नको चित्र">`:""}
+  ${star(q)}<div class="qtext">${esc(q.q).replace(/\n/g,"<br>")}</div>${q.fig?`<img class="fig" src="${q.fig}" alt="प्रश्नको चित्र">`:""}
   ${q.o.map((o,i)=>{const fb=c.practice&&a!==undefined;const cl=fb?(i===q.a?"ok":(i===a?"bad":"")):(a===i?"on":"");
     return `<button class="opt ${cl}" onclick="pick(${i})" ${fb?"disabled":""}><span class="rd"></span><span><span class="lt">${LET[i]}.</span> ${esc(o)}${fb&&i===q.a?" ✓":""}${fb&&i===a&&i!==q.a?" ✗":""}</span></button>`}).join("")}
   ${c.practice&&a!==undefined?`<div class="fbk ${a===q.a?"ok":"bad"}">${a===q.a?"🎉 सही! Correct":"✗ गलत · Wrong — सही उत्तर: "+LET[q.a]+". "+esc(q.o[q.a])}</div>${expl(q)}`:""}
@@ -436,7 +439,7 @@ V.review=()=>{
 function reviewCard(q,it,n){
  const lab={ok:"✓ सही",bad:"✗ गलत",skip:"उत्तर दिइएन"}[it.st];
  return `<div class="rv ${it.st}"><div class="row" style="justify-content:space-between"><span class="tag">${lab}</span><span class="note">प्रश्न ${NUM(n)} • ${TOPICS[q.t]} • ${it.m>0?"+":""}${fmt(it.m)} अंक <button class="bm" onclick="toggleBm('${q.id}')">${S.bm[q.id]?"★":"☆"}</button></span></div>
- <div class="qtext" style="font-size:1.08rem;margin-top:8px">${esc(q.q).replace(/\n/g,"<br>")}</div>${q.fig?`<img class="fig" src="${q.fig}" alt="">`:""}
+ ${star(q)}<div class="qtext" style="font-size:1.08rem;margin-top:8px">${esc(q.q).replace(/\n/g,"<br>")}</div>${q.fig?`<img class="fig" src="${q.fig}" alt="">`:""}
  ${q.o.map((o,i)=>`<div class="ro ${i===q.a?'right':''} ${i===it.a&&i!==q.a?'mine':''}">${LET[i]}. ${esc(o)} ${i===q.a?" ✓":""}${i===it.a&&i!==q.a?" ✗ (तपाईंको उत्तर)":""}${i===it.a&&i===q.a?" (तपाईंको उत्तर)":""}</div>`).join("")}
  <div class="note" style="margin-top:6px">तपाईंको उत्तर: <b>${it.a===null?"दिइएन":LET[it.a]+". "+esc(q.o[it.a])}</b> • सही उत्तर: <b>${LET[q.a]}. ${esc(q.o[q.a])}</b></div>
  ${expl(q)}</div>`;
@@ -453,10 +456,10 @@ V.guide=()=>{const g=view.guideSet; const qs=g==="A"||g==="B"?DB.filter(q=>q.set
  return topbar("प्रश्न र उत्तर")+`<div class="wrap"><div class="tabs" style="margin-top:14px">
  ${PAPERS.map(p=>[p.key,p.year+" "+p.short]).concat([["A","अनुमानित A"],["B","अनुमानित B"]]).map(([k,l])=>`<button class="${g===k?'on':''}" onclick="view.guideSet='${k}';render('guide')">${l}</button>`).join("")}</div>
  ${qs.map((q,i)=>`<div class="rv"><div class="row" style="justify-content:space-between"><span class="note">${NUM(q.n||i+1)}. ${TOPICS[q.t]||""}</span><button class="bm" onclick="toggleBm('${q.id}')">${S.bm[q.id]?"★":"☆"}</button></div>
- <div class="qtext" style="font-size:1.05rem">${esc(q.q).replace(/\n/g,"<br>")}</div>${q.fig?`<img class="fig" src="${q.fig}" alt="">`:""}${q.o.map((o,j)=>`<div class="ro ${j===q.a?'right':''}">${LET[j]}. ${esc(o)}${j===q.a?" ✓":""}</div>`).join("")}${expl(q)}</div>`).join("")}</div>`};
+ ${star(q)}<div class="qtext" style="font-size:1.05rem">${esc(q.q).replace(/\n/g,"<br>")}</div>${q.fig?`<img class="fig" src="${q.fig}" alt="">`:""}${q.o.map((o,j)=>`<div class="ro ${j===q.a?'right':''}">${LET[j]}. ${esc(o)}${j===q.a?" ✓":""}</div>`).join("")}${expl(q)}</div>`).join("")}</div>`};
 
 V.bookmarks=()=>{const ids=Object.keys(S.bm).filter(byId);return topbar("Bookmark प्रश्न")+`<div class="wrap"><div class="row" style="margin-top:14px"><button class="btn pri" onclick="startBm()" ${ids.length?"":"disabled"}>यी प्रश्नको परीक्षा दिनुहोस्</button></div>
- ${ids.map((id,i)=>{const q=byId(id);return `<div class="rv"><div class="row" style="justify-content:space-between"><span class="note">${NUM(i+1)}. ${TOPICS[q.t]}</span><button class="bm" onclick="toggleBm('${q.id}')">★</button></div><div class="qtext" style="font-size:1.05rem">${esc(q.q)}</div>${q.o.map((o,j)=>`<div class="ro ${j===q.a?'right':''}">${LET[j]}. ${esc(o)}</div>`).join("")}${expl(q)}</div>`}).join("")||'<p class="note">परीक्षा वा Study Guide मा ☆ थिचेर प्रश्न Bookmark गर्नुहोस्।</p>'}</div>`};
+ ${ids.map((id,i)=>{const q=byId(id);return `<div class="rv"><div class="row" style="justify-content:space-between"><span class="note">${NUM(i+1)}. ${TOPICS[q.t]}</span><button class="bm" onclick="toggleBm('${q.id}')">★</button></div>${star(q)}<div class="qtext" style="font-size:1.05rem">${esc(q.q)}</div>${q.o.map((o,j)=>`<div class="ro ${j===q.a?'right':''}">${LET[j]}. ${esc(o)}</div>`).join("")}${expl(q)}</div>`}).join("")||'<p class="note">परीक्षा वा Study Guide मा ☆ थिचेर प्रश्न Bookmark गर्नुहोस्।</p>'}</div>`};
 
 V.progress=()=>{const h=S.history; const days={}; h.forEach(x=>{const d=x.date.slice(0,10);days[d]=(days[d]||0)+x.n});
  const last=h.slice(0,12).reverse(); const W=320,H=140;
