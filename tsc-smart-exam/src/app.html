@@ -306,6 +306,8 @@ V.home=()=>{
  <div class="plist">${imp.map(p=>row(p.key,"⭐",p.lv,"सम्भावित (Probable)",p.imp.length,"imp")).join("")}</div>
  <h2 class="sec">पुराना निम्नमाध्यमिक प्रश्नपत्र · Old Papers</h2>
  <div class="plist">${old.map(p=>row(p.key,p.year,p.lv+(p.mine?' <span class="mine">मेरो तह</span>':""),p.sub,paperQs(p.key).length)).join("")}</div>
+ <h2 class="sec">PDF का अनुमानित सेट · PDF Model Sets</h2>
+ <div class="plist">${gs.map(p=>row(p.key,"PDF",p.lv,p.sub,paperQs(p.key).length,"imp")).join("")}</div>
  <h2 class="sec">थप · More</h2>
  <div class="modes">
   ${mode("🎲","linear-gradient(135deg,#4f46e5,#7c3aed)","सबै मिसाएर · Mixed","सबै पुराना प्रश्नबाट ५० प्रश्न","startRandom()")}

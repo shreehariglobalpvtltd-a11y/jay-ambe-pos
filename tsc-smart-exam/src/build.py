@@ -25,7 +25,7 @@ for i in range(3):
         if q["id"] not in used: used.add(q["id"]); ids.append(q["id"])
     IMP.append({"key": f"imp{i+1}", "year": "२०८३", "lv": f"Important सेट {i+1}", "sub": "सम्भावित महत्त्वपूर्ण प्रश्न", "short": f"Important {i+1}",
                 "mine": True, "guess": True, "imp": ids, "src": "पुराना निमावि प्रश्न र अनुमानित सेटबाट छानिएका", "url": ""})
-PAP = IMP + [p for p in PAP if p["mine"] and not p["guess"]]
+PAP = IMP + [p for p in PAP if (p["mine"] and not p["guess"]) or p["key"] in ("uA","uB")]
 keep = {p["key"] for p in PAP}; impids = {i for p in IMP for i in p["imp"]}
 db = [q for q in db if (q.get("paper") in keep) or q["id"] in impids]
 tpl = open(os.path.join(R, "app.html")).read()
