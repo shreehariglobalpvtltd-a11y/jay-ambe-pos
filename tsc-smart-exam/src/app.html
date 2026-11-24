@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="ne">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cut">
+<title>संगीता TSC स्मार्ट परीक्षा</title>
+<meta name="description" content="संगीता सुनारका लागि शिक्षक सेवा आयोग निम्नमाध्यमिक तह प्रथम पत्र अभ्यास">
+<meta name="theme-color" content="#4f46e5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="TSC संगीता">
+<!--PWA_HEAD-->
+<style>
+@font-face{font-family:Mukta;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,__F400__) format('woff2');unicode-range:U+0900-097F,U+1CD0-1CF9,U+200C-200D,U+20A8,U+20B9,U+25CC,U+A830-A839,U+A8E0-A8FF}
+@font-face{font-family:Mukta;font-weight:700;font-display:swap;src:url(data:font/woff2;base64,__F700__) format('woff2');unicode-range:U+0900-097F,U+1CD0-1CF9,U+200C-200D,U+20A8,U+20B9,U+25CC,U+A830-A839,U+A8E0-A8FF}
+@font-face{font-family:Mukta;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,__F400L__) format('woff2');unicode-range:U+0000-00FF,U+2000-206F,U+2190-22FF}
+@font-face{font-family:Mukta;font-weight:700;font-display:swap;src:url(data:font/woff2;base64,__F700L__) format('woff2');unicode-range:U+0000-00FF,U+2000-206F,U+2190-22FF}
+:root{
+ --bg:#f4f3ff;--card:#ffffff;--ink:#1e1b4b;--muted:#5b5a7a;--line:#e4e2f5;
+ --blue:#4f46e5;--purple:#7c3aed;--orange:#f97316;--gold:#f59e0b;
+ --ok:#16a34a;--okbg:#dcfce7;--bad:#dc2626;--badbg:#fee2e2;--skip:#ea580c;--skipbg:#ffedd5;
+ --sel:#ede9fe;--shadow:0 6px 24px rgba(79,70,229,.10);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+ --bg:#0f0d23;--card:#1b1838;--ink:#eeeaff;--muted:#a8a4c8;--line:#2e2a55;--sel:#2e2366;
+ --okbg:#0f3a22;--badbg:#45161a;--skipbg:#47240c;--shadow:0 6px 24px rgba(0,0,0,.35);color-scheme:dark}}
+:root[data-theme="dark"]{color-scheme:dark;
+ --bg:#0f0d23;--card:#1b1838;--ink:#eeeaff;--muted:#a8a4c8;--line:#2e2a55;--sel:#2e2366;
+ --okbg:#0f3a22;--badbg:#45161a;--skipbg:#47240c;--shadow:0 6px 24px rgba(0,0,0,.35)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Mukta,"Noto Sans Devanagari","Kohinoor Devanagari",system-ui,sans-serif;font-size:17px;line-height:1.6}
+button{font:inherit;cursor:pointer;border:0}
+.wrap{max-width:860px;margin:0 auto;padding-block:0 96px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{background:linear-gradient(120deg,var(--blue),var(--purple));color:#fff;padding:14px 16px;position:sticky;top:env(safe-area-inset-top,0px);z-index:20;box-shadow:0 4px 18px rgba(79,70,229,.35)}
+header.top .in{max-width:860px;margin:0 auto;display:flex;align-items:center;gap:10px}
+.brand{font-weight:700;font-size:1.05rem;flex:1;line-height:1.2}
+.brand small{display:block;font-weight:400;opacity:.85;font-size:.8rem}
+.iconbtn{background:rgba(255,255,255,.18);color:#fff;width:40px;height:40px;border-radius:12px;font-size:1.15rem;display:grid;place-items:center}
+.hero{margin:18px 0;padding:22px;border-radius:24px;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 60%,#a855f7 100%);color:#fff;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.hero h1{margin:0 0 4px;font-size:1.7rem;line-height:1.25}
+.hero p{margin:0;opacity:.92}
+.hero .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.chip{background:rgba(255,255,255,.18);padding:3px 10px;border-radius:99px;font-size:.82rem}
+.hero:after{content:"";position:absolute;right:-70px;top:-70px;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,#fbbf24 0,#f97316 70%);opacity:.45}
+h2.sec{font-size:1.15rem;margin:26px 0 10px;display:flex;align-items:center;gap:8px}
+h2.sec:before{content:"";width:6px;height:22px;border-radius:4px;background:linear-gradient(var(--orange),var(--gold))}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.card{background:var(--card);border-radius:20px;padding:16px;box-shadow:var(--shadow);border:1px solid var(--line)}
+.setcard{text-align:left;color:var(--ink);background:var(--card);border-radius:20px;padding:14px;border:1px solid var(--line);box-shadow:var(--shadow);transition:transform .15s;position:relative;min-height:118px}
+.setcard:active{transform:scale(.97)}
+.setcard .no{font-size:.75rem;font-weight:700;color:var(--purple);letter-spacing:.04em}
+.setcard .yr{font-size:1.35rem;font-weight:700;line-height:1.3}
+.setcard .st{font-size:.78rem;color:var(--muted)}
+.setcard.na{opacity:.72}
+.setcard.na .yr{color:var(--muted)}
+.setcard.model{background:linear-gradient(135deg,#fff7ed,#fef3c7);border-color:#fcd34d;color:#1e1b4b}
+.setcard.model .st{color:#7c5a10}
+.badge{position:absolute;top:10px;right:10px;font-size:.68rem;padding:2px 8px;border-radius:99px;background:var(--line);color:var(--muted)}
+.badge.gold{background:linear-gradient(90deg,var(--orange),var(--gold));color:#fff}
+.badge.green{background:var(--ok);color:#fff}
+.modes{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.mode{display:flex;gap:12px;align-items:center;text-align:left;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:18px;padding:12px 14px;box-shadow:var(--shadow)}
+.mode .ic{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;font-size:1.3rem;flex:none;color:#fff}
+.mode b{display:block;line-height:1.3}
+.mode span{font-size:.8rem;color:var(--muted);line-height:1.3;display:block}
+.btn{border-radius:14px;padding:10px 16px;font-weight:700;background:var(--line);color:var(--ink);transition:transform .1s}
+.btn:active{transform:scale(.96)}
+.btn.pri{background:linear-gradient(90deg,var(--blue),var(--purple));color:#fff}
+.btn.org{background:linear-gradient(90deg,var(--orange),var(--gold));color:#fff}
+.btn.red{background:var(--bad);color:#fff}
+.btn.ghost{background:transparent;border:2px solid var(--line)}
+.btn:disabled{opacity:.45}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.note{font-size:.85rem;color:var(--muted)}
+.warnbox{background:var(--skipbg);border-left:5px solid var(--orange);padding:10px 14px;border-radius:12px;font-size:.88rem;margin:12px 0}
+.infobox{background:var(--sel);border-left:5px solid var(--purple);padding:10px 14px;border-radius:12px;font-size:.88rem;margin:12px 0}
+/* exam */
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--blue)}
+.exbar{background:linear-gradient(120deg,var(--blue),var(--purple));color:#fff;padding:10px 16px 12px;position:sticky;top:env(safe-area-inset-top,0px);z-index:20}
+.exbar .in{max-width:860px;margin:0 auto}
+.exbar .l1{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.9rem}
+.timer{background:rgba(255,255,255,.2);padding:4px 12px;border-radius:99px;font-weight:700;font-variant-numeric:tabular-nums;font-size:1.05rem}
+.timer.low{background:#dc2626;animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.6}}
+.prog{height:10px;border-radius:99px;background:rgba(255,255,255,.25);margin-top:8px;overflow:hidden}
+.prog i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--orange));border-radius:99px;transition:width .4s}
+.qcard{background:var(--card);border-radius:24px;padding:20px;margin-top:16px;box-shadow:var(--shadow);border:1px solid var(--line);animation:slide .25s ease}
+@keyframes slide{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+.qmeta{display:flex;justify-content:space-between;font-size:.85rem;color:var(--muted);margin-bottom:6px;gap:6px;flex-wrap:wrap}
+.qtext{font-size:1.22rem;font-weight:700;line-height:1.55;margin:4px 0 14px}
+.opt{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;background:var(--card);color:var(--ink);border:2px solid var(--line);border-radius:16px;padding:12px 14px;margin:8px 0;font-size:1.06rem;transition:all .15s}
+.opt .rd{width:24px;height:24px;border-radius:50%;border:2px solid var(--muted);flex:none;margin-top:2px;display:grid;place-items:center}
+.opt.on{border-color:var(--purple);background:var(--sel)}
+.opt.on .rd{border-color:var(--purple);background:var(--purple)}
+.opt.on .rd:after{content:"";width:9px;height:9px;border-radius:50%;background:#fff}
+.opt .lt{font-weight:700;color:var(--purple)}
+.navbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.navbtns .full{grid-column:1/-1}
+.palette{display:grid;grid-template-columns:repeat(auto-fill,minmax(40px,1fr));gap:6px;margin-top:14px}
+.palette button{height:40px;border-radius:10px;background:var(--line);color:var(--ink);font-weight:700;font-size:.9rem}
+.palette .a{background:var(--purple);color:#fff}
+.palette .m{background:var(--gold);color:#fff}
+.palette .c{outline:3px solid var(--orange)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:.78rem;color:var(--muted);margin-top:8px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-1px;margin-right:4px}
+/* result */
+.rhead{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
+@media(max-width:560px){.rhead{grid-template-columns:1fr;justify-items:center;text-align:center}}
+.ring{width:170px;height:170px}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-top:14px}
+.stat{background:var(--bg);border-radius:14px;padding:10px 12px}
+.stat b{display:block;font-size:1.3rem;line-height:1.2}
+.stat span{font-size:.78rem;color:var(--muted)}
+.passbig{font-size:1.5rem;font-weight:700}
+.bar{height:14px;background:var(--line);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;width:0;transition:width 1s ease}
+.tp{margin:10px 0}
+.tp .h{display:flex;justify-content:space-between;font-size:.9rem}
+/* review */
+.rv{border-radius:20px;padding:16px;margin:12px 0;border:2px solid var(--line);background:var(--card)}
+.rv.ok{border-color:var(--ok)}.rv.bad{border-color:var(--bad)}.rv.skip{border-color:var(--skip)}
+.rv .tag{display:inline-block;padding:2px 10px;border-radius:99px;font-size:.8rem;font-weight:700;color:#fff}
+.rv.ok .tag{background:var(--ok)}.rv.bad .tag{background:var(--bad)}.rv.skip .tag{background:var(--skip)}
+.ro{padding:8px 12px;border-radius:12px;margin:5px 0;border:1px solid var(--line)}
+.ro.right{background:var(--okbg);border-color:var(--ok);font-weight:700}
+.ro.mine{background:var(--badbg);border-color:var(--bad)}
+.exp{background:var(--bg);border-radius:12px;padding:10px 12px;margin-top:8px;font-size:.95rem}
+.exp h4{margin:6px 0 2px;font-size:.92rem;color:var(--purple)}
+.exp p{margin:0 0 4px}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+.tabs button{white-space:nowrap;border-radius:99px;padding:6px 14px;background:var(--card);color:var(--ink);border:1px solid var(--line);font-size:.9rem}
+.tabs button.on{background:var(--purple);color:#fff;border-color:var(--purple)}
+.modal{position:fixed;inset:0;background:rgba(15,13,35,.55);display:grid;place-items:center;z-index:50;padding:16px}
+.modal .box{background:var(--card);border-radius:22px;padding:20px;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.4);animation:slide .2s}
+table.t{width:100%;border-collapse:collapse;font-size:.9rem}
+table.t td,table.t th{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left}
+.bm{background:none;font-size:1.3rem;color:var(--gold);padding:0 4px}
+textarea{width:100%;min-height:120px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);padding:10px;font:inherit;font-size:.85rem}
+select{font:inherit;padding:8px 10px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:60}
+.pri-H{color:#fff;background:#dc2626}.pri-M{color:#fff;background:#f59e0b}.pri-L{color:#fff;background:#64748b}
+.pill{font-size:.72rem;padding:1px 8px;border-radius:99px;font-weight:700}
+footer{text-align:center;font-size:.78rem;color:var(--muted);margin-top:30px}
+@media print{header.top,.noprint{display:none!important}.rv{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<canvas id="confetti"></canvas>
+<script>
+"use strict";
+const DB = __DB__;
+const FRAMED = (()=>{try{return window.self!==window.top}catch(e){return true}})();
+const STUDENT = {np:"संगीता सुनार", en:"Sangita Sunar"};
+/* आधिकारिक ढाँचा (स्रोत: स्रोत प्रतिवेदन हेर्नुहोस्) */
+const RULE = {total:50, mark:2, full:100, pass:50, minutes:60, neg:0.4, unanswered:0};
+const TOPICS = {const:"नेपालको संविधान",edu:"शिक्षा ऐन, नियमावली र नीति",psy:"शैक्षिक मनोविज्ञान",method:"शिक्षण विधि",eval:"पाठ्यक्रम तथा मूल्याङ्कन",gk:"सामान्य ज्ञान",iq:"बौद्धिक परीक्षण (IQ)",ict:"सूचना तथा सञ्चार प्रविधि",cur:"समसामयिक"};
+const TCOL = {const:"#4f46e5",edu:"#7c3aed",psy:"#db2777",method:"#0891b2",eval:"#16a34a",gk:"#f97316",iq:"#f59e0b",ict:"#2563eb",cur:"#64748b"};
+const PRI = {H:"उच्च प्राथमिकता",M:"मध्यम प्राथमिकता",L:"सामान्य प्राथमिकता"};
+const LET = ["क","ख","ग","घ"];
+const YEARS = ["२०७३","२०७४","२०७५","२०७६","२०७७","२०७८","२०७९","२०८०","२०८१","२०८२"];
+const NUM = n => String(n).replace(/\d/g,d=>"०१२३४५६७८९"[d]);
+const fmt = (x,dp=2) => NUM((Math.round(x*100)/100).toFixed(dp).replace(/\.00$/,"").replace(/(\.\d)0$/,"$1"));
+const dt=(d,t)=>{d=new Date(d);const p=n=>String(n).padStart(2,"0");return NUM(d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+(t?" "+p(d.getHours())+":"+p(d.getMinutes()):""))};
+const $ = s => document.querySelector(s);
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---------- storage (try/catch: private mode safe) ---------- */
+const KEY="sangita_tsc_v1";
+let S = {history:[],wrong:{},bm:{},imported:[],current:null,theme:null};
+function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||"null");if(v)S=Object.assign(S,v)}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+load();
+if(S.theme) document.documentElement.dataset.theme=S.theme;
+
+function allQ(){return DB.concat(S.imported||[])}
+function byId(id){return allQ().find(q=>q.id===id)}
+function yearQs(y){return (S.imported||[]).filter(q=>q.year===y)}
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+
+/* ---------- sets ---------- */
+function setDefs(){
+ const ys = YEARS.map((y,i)=>{const n=yearQs(y).length;return {key:"Y"+y,no:i+1,title:y+" साल",kind:"year",year:y,
+   avail:n>0, st:n? NUM(n)+" प्रमाणित प्रश्न"+(n<RULE.total?" (अपूर्ण)":""): "प्रमाणित प्रश्नपत्र उपलब्ध छैन"}});
+ ys.push({key:"A",no:11,title:"२०८३ Model Set A",kind:"model",avail:true,st:"५० प्रश्न • सम्भावित अभ्यास"});
+ ys.push({key:"B",no:12,title:"२०८३ Model Set B",kind:"model",avail:true,st:"५० प्रश्न • सम्भावित अभ्यास"});
+ return ys;
+}
+function quickIds(){
+ const pick=s=>DB.filter(q=>q.set===s&&q.p==="H");
+ const take=(arr)=>{const seen={},out=[];for(const q of arr){if(!seen[q.t]&&out.length<6){seen[q.t]=1;out.push(q)}}for(const q of arr){if(out.length<6&&!out.includes(q))out.push(q)}return out};
+ return take(pick("A")).concat(take(pick("B"))).map(q=>q.id);
+}
+
+/* ---------- exam engine ---------- */
+function startExam(o){
+ // o: {title, ids, full:boolean, minutes, kind}
+ if(!o.ids.length){toast("यस मोडमा अहिले कुनै प्रश्न छैन।");return}
+ S.current={title:o.title,ids:o.ids,ans:{},mark:{},idx:0,full:!!o.full&&o.ids.length===RULE.total,kind:o.kind||"practice",
+  dur:Math.round((o.minutes|| (o.ids.length*RULE.minutes/RULE.total))*60),started:Date.now(),elapsed:0};
+ save(); render("exam");
+}
+let tick=null, lastT=0;
+function remaining(){const c=S.current;return c.dur-c.elapsed}
+let saveCt=0;
+function stopTimer(){clearInterval(tick);tick=null}
+function startTimer(){
+ if(tick) return; lastT=Date.now();
+ tick=setInterval(()=>{const c=S.current;if(!c){stopTimer();return}
+  const now=Date.now();c.elapsed+=(now-lastT)/1000;lastT=now;
+  const r=remaining(); const el=$("#tm"); if(el){el.textContent=clock(r);el.classList.toggle("low",r<=120)}
+  if(++saveCt%5===0)save();
+  if(r<=0){stopTimer();toast("समय सकियो — परीक्षा स्वतः बुझाइयो।");finish()}
+ },500);
+}
+function clock(s){s=Math.max(0,Math.ceil(s));const m=Math.floor(s/60),x=s%60;return NUM(String(m).padStart(2,"0"))+":"+NUM(String(x).padStart(2,"0"))}
+function finish(){
+ stopTimer();
+ const c=S.current; if(!c)return;
+ let right=0,wrong=0,skip=0; const tstat={}; const items=[];
+ c.ids.forEach(id=>{const q=byId(id); if(!q)return; const a=c.ans[id];
+  const ts=tstat[q.t]||(tstat[q.t]={n:0,r:0,w:0,s:0});ts.n++;
+  let st,m;
+  if(a===undefined||a===null){skip++;ts.s++;st="skip";m=RULE.unanswered}
+  else if(a===q.a){right++;ts.r++;st="ok";m=RULE.mark;delete S.wrong[id]}
+  else {wrong++;ts.w++;st="bad";m=-RULE.neg;S.wrong[id]=(S.wrong[id]||0)+1}
+  items.push({id,a:a??null,st,m});
+ });
+ const full=c.ids.length*RULE.mark; const neg=wrong*RULE.neg;
+ const score=right*RULE.mark-neg;
+ const res={id:Date.now(),title:c.title,kind:c.kind,full:c.full,n:c.ids.length,right,wrong,skip,fullMarks:full,
+  neg,score,pct:full?Math.max(0,score)/full*100:0,secs:Math.round(Math.min(c.elapsed,c.dur)),date:new Date().toISOString(),tstat,items,
+  pass:c.full?score>=RULE.pass:null};
+ S.history.unshift(res); S.history=S.history.slice(0,60); S.current=null; save();
+ view.result=res.id; render("result");
+ if(res.pct>=60) confetti();
+}
+
+/* ---------- views ---------- */
+const view={name:"home",result:null,filter:"all",topic:"const",guideSet:"A"};
+function render(name){ if(name)view.name=name; window.scrollTo(0,0); const f=V[view.name]||V.home; $("#app").innerHTML=f(); if(view.name==="exam")startTimer(); else stopTimer(); if(view.name==="result")setTimeout(animBars,60); }
+function topbar(title,back=true){
+ return `<header class="top"><div class="in">${back?`<button class="iconbtn" onclick="render('home')" aria-label="गृहपृष्ठ">⌂</button>`:""}
+ <div class="brand">${title}<small>${STUDENT.np} • TSC निम्नमाध्यमिक तृतीय श्रेणी</small></div>
+ <button class="iconbtn" onclick="toggleTheme()" aria-label="Dark/Light mode">◐</button></div></header>`;
+}
+function toggleTheme(){const cur=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");
+ const n=cur==="dark"?"light":"dark";document.documentElement.dataset.theme=n;S.theme=n;save()}
+
+const V={};
+V.home=()=>{
+ const sets=setDefs(); const c=S.current; const last=S.history[0];
+ const wrongN=Object.keys(S.wrong).filter(byId).length, bmN=Object.keys(S.bm).filter(byId).length;
+ return topbar("TSC स्मार्ट परीक्षा २०८३",false)+`<div class="wrap">
+ <div class="hero"><h1>नमस्ते, संगीता सुनार! 🌸</h1><p>तपाईंको सफलताको यात्रा आजैबाट सुरु हुन्छ।</p>
+ <div class="chips"><span class="chip">शिक्षक सेवा आयोग</span><span class="chip">निम्नमाध्यमिक तह</span><span class="chip">तृतीय श्रेणी</span><span class="chip">प्रथम पत्र — सामान्य परीक्षा</span><span class="chip">📍 पोखरा, गण्डकी</span></div></div>
+ ${c?`<div class="card" style="border-color:var(--orange)"><b>⏸ अधुरो परीक्षा: ${esc(c.title)}</b><div class="note">${NUM(Object.keys(c.ans).length)}/${NUM(c.ids.length)} उत्तर दिइएको • बाँकी समय ${clock(remaining())}</div>
+  <div class="row" style="margin-top:8px"><button class="btn org" onclick="render('exam')">पुनः सुरु गर्नुहोस्</button><button class="btn ghost" onclick="abandon()">रद्द गर्नुहोस्</button></div></div>`:""}
+ ${last?`<div class="card" style="margin-top:12px"><div class="row" style="justify-content:space-between"><div><b>अन्तिम परीक्षा:</b> ${esc(last.title)}<div class="note">${fmt(last.score)}/${NUM(last.fullMarks)} अंक • ${fmt(last.pct,1)}%</div></div><button class="btn" onclick="view.result=${last.id};render('result')">नतिजा हेर्नुहोस्</button></div></div>`:""}
+ <h2 class="sec">१२ परीक्षा सेट</h2>
+ <div class="grid">${sets.map(s=>`<button class="setcard ${s.kind==='model'?'model':''} ${s.avail?'':'na'}" onclick="openSet('${s.key}')">
+  <span class="badge ${s.kind==='model'?'gold':(s.avail?'green':'')}">${s.kind==='model'?'सम्भावित':(s.avail?'उपलब्ध':'उपलब्ध छैन')}</span>
+  <div class="no">SET ${NUM(String(s.no).padStart(2,"0"))}</div><div class="yr">${s.title}</div><div class="st">${s.st}</div></button>`).join("")}</div>
+ <div class="warnbox">⚠️ <b>इमानदार जानकारी:</b> २०७३–२०८२ का वास्तविक प्रश्नपत्र यो एपमा अहिले राखिएका छैनन्, किनभने तिनलाई दुई विश्वसनीय स्रोतबाट प्रमाणित गर्न सकिएन। काल्पनिक प्रश्नलाई ‘पुरानो प्रश्न’ भनेर राखिएको छैन। वास्तविक प्रश्नपत्र पाएपछि <a href="#" onclick="render('data');return false">“प्रश्न थप्नुहोस्”</a> बाट सम्बन्धित सालमा थप्न सकिन्छ।</div>
+ <h2 class="sec">स्मार्ट अभ्यास मोड</h2>
+ <div class="modes">
+  ${mode("⚡","linear-gradient(135deg,#f97316,#f59e0b)","Special Quick Test (१२ प्रश्न)","Set A र B बाट ६–६ उच्च प्राथमिकताका प्रश्न","startQuick()")}
+  ${mode("🎲","linear-gradient(135deg,#4f46e5,#7c3aed)","Random Exam (सबै मिसाएर)","उपलब्ध सबै प्रश्नबाट ५० प्रश्न","startRandom()")}
+  ${mode("🔥","linear-gradient(135deg,#dc2626,#f97316)","उच्च प्राथमिकताका प्रश्न","पाठ्यक्रममा मुख्य विषयका प्रश्न","startPri()")}
+  ${mode("🔁","linear-gradient(135deg,#0891b2,#2563eb)","बारम्बार दोहोरिएका प्रश्न","प्रमाणित पुरानो प्रश्नमा आधारित","startRepeat()")}
+  ${mode("✗","linear-gradient(135deg,#be123c,#e11d48)","गलत प्रश्नको पुनः अभ्यास",NUM(wrongN)+" प्रश्न","startWrong()")}
+  ${mode("📚","linear-gradient(135deg,#16a34a,#0d9488)","विषयअनुसार परीक्षा","संविधान, मनोविज्ञान, IQ …","render('topics')")}
+  ${mode("📖","linear-gradient(135deg,#7c3aed,#db2777)","Study Guide","प्रश्न र उत्तर सँगसँगै पढ्नुहोस्","render('guide')")}
+  ${mode("★","linear-gradient(135deg,#f59e0b,#eab308)","Bookmark प्रश्न",NUM(bmN)+" सुरक्षित प्रश्न","render('bookmarks')")}
+  ${mode("📈","linear-gradient(135deg,#2563eb,#4f46e5)","प्रगति रिपोर्ट र इतिहास","अंक तुलना, दैनिक अभ्यास","render('progress')")}
+  ${mode("🧭","linear-gradient(135deg,#9333ea,#4f46e5)","विषय विश्लेषण र प्राथमिकता","कुन विषय कति महत्त्वपूर्ण","render('analysis')")}
+  ${mode("🗂","linear-gradient(135deg,#475569,#64748b)","डाटा, ब्याकअप र प्रश्न थप","Export/Import, वास्तविक प्रश्न थप्ने","render('data')")}
+  ${mode("ℹ","linear-gradient(135deg,#0f766e,#16a34a)","परीक्षा नियम र स्रोत","अंक, समय, नेगेटिभ मार्किङ","render('rules')")}
+ </div>
+ <footer>प्रश्नहरू सम्भावित अभ्यासका लागि हुन् — वास्तविक परीक्षामा यही प्रश्न आउने ग्यारेन्टी होइन।<br>तपाईंको अंक, इतिहास र Bookmark यही फोन/ब्राउजरमा मात्र सुरक्षित हुन्छन्।</footer>
+ </div>`;
+};
+function mode(ic,bg,t,s,fn){return `<button class="mode" onclick="${fn}"><div class="ic" style="background:${bg}">${ic}</div><div><b>${t}</b><span>${s}</span></div></button>`}
+function askYes(msg,fn){modal(`<p style="margin-top:0">${msg}</p><div class="row"><button class="btn red" id="yesb">हो</button><button class="btn" onclick="closeModal()">होइन</button></div>`);$("#yesb").onclick=()=>{closeModal();fn()}}
+function abandon(){askYes("अधुरो परीक्षा रद्द गर्ने?",()=>{S.current=null;save();render("home")})}
+function withGuard(fn){if(!S.current){fn();return}askYes("एउटा अधुरो परीक्षा बाँकी छ। त्यसलाई रद्द गरेर नयाँ सुरु गर्ने?",()=>{S.current=null;save();fn()})}
+function openSet(k){
+ const s=setDefs().find(x=>x.key===k);
+ if(s.kind==="model"){withGuard(()=>{const ids=DB.filter(q=>q.set===k).map(q=>q.id);startExam({title:"SET "+NUM(s.no)+" — "+s.title,ids,full:true,minutes:RULE.minutes,kind:"model"})});return}
+ if(!s.avail){modal(`<h3 style="margin-top:0">${s.title} — प्रश्नपत्र उपलब्ध छैन</h3><p>यस सालको वास्तविक प्रश्नपत्र, चारवटै विकल्प र सही उत्तर दुई विश्वसनीय स्रोतबाट प्रमाणित गर्न नसकिएकाले यहाँ राखिएको छैन।</p><p class="note">आयोगको वेबसाइट (tsc.gov.np), शिक्षक वा कोचिङबाट प्रमाणित प्रश्नपत्र पाएपछि “डाटा र प्रश्न थप” मा गएर यस सालमा थप्न सकिन्छ।</p><div class="row"><button class="btn pri" onclick="closeModal();render('data')">प्रश्न थप्नुहोस्</button><button class="btn" onclick="closeModal()">ठीक छ</button></div>`);return}
+ withGuard(()=>{const ids=yearQs(s.year).map(q=>q.id);
+ startExam({title:"SET "+NUM(s.no)+" — "+s.title+(ids.length<RULE.total?" (अपूर्ण)":""),ids,full:ids.length===RULE.total,kind:"year"})});
+}
+function startQuick(){withGuard(()=>{startExam({title:"Special Quick Test (१२ प्रश्न)",ids:quickIds(),minutes:15,kind:"quick"})})}
+function startRandom(){withGuard(()=>{const ids=shuffle(allQ().map(q=>q.id)).slice(0,RULE.total);startExam({title:"Random Exam — सबै मिसाएर",ids,full:ids.length===RULE.total,minutes:RULE.minutes,kind:"random"})})}
+function startPri(){withGuard(()=>{const ids=shuffle(allQ().filter(q=>q.p==="H").map(q=>q.id));startExam({title:"उच्च प्राथमिकताका प्रश्न",ids,kind:"practice"})})}
+function startRepeat(){const r=(S.imported||[]).filter(q=>(q.repeat||0)>=2);
+ if(!r.length){modal(`<h3 style="margin-top:0">बारम्बार दोहोरिएका प्रश्न</h3><p>यो मोड वास्तविक पुराना प्रश्नपत्रमा आधारित हुन्छ। अहिले प्रमाणित पुराना प्रश्न नभएकाले कुन प्रश्न दोहोरिएको हो भनेर देखाउन मिल्दैन — अनुमान गरेर देखाइएको छैन।</p><p class="note">पुराना प्रश्न थपेपछि एउटै प्रश्न दुई वा बढी सालमा आएको भए (\"repeat\": २ वा बढी) यहाँ आउँछ।</p><button class="btn pri" onclick="closeModal()">ठीक छ</button>`);return}
+ withGuard(()=>{startExam({title:"बारम्बार दोहोरिएका प्रश्न",ids:shuffle(r.map(q=>q.id)),kind:"practice"})})}
+function startWrong(){const ids=Object.keys(S.wrong).filter(byId);if(!ids.length){toast("अहिले कुनै गलत प्रश्न छैन। राम्रो! 🎉");return}withGuard(()=>{startExam({title:"गलत प्रश्नको पुनः अभ्यास",ids:shuffle(ids),kind:"retry"})})}
+function startTopic(t){withGuard(()=>{startExam({title:"विषयगत परीक्षा — "+TOPICS[t],ids:shuffle(allQ().filter(q=>q.t===t).map(q=>q.id)),kind:"topic"})})}
+function startBm(){const ids=Object.keys(S.bm).filter(byId);if(!ids.length){toast("Bookmark गरिएको प्रश्न छैन।");return}withGuard(()=>{startExam({title:"Bookmark प्रश्न अभ्यास",ids:shuffle(ids),kind:"practice"})})}
+
+V.exam=()=>{
+ const c=S.current; if(!c) return V.home();
+ const q=byId(c.ids[c.idx]); const n=c.ids.length; const done=Object.keys(c.ans).length;
+ const a=c.ans[q.id];
+ return `<div class="exbar"><div class="in"><div class="l1"><div><b>👩‍🏫 ${STUDENT.np}</b><div style="opacity:.85;font-size:.8rem">${esc(c.title)}</div></div><div id="tm" class="timer">${clock(remaining())}</div></div>
+ <div class="prog"><i style="width:${done/n*100}%"></i></div><div style="font-size:.78rem;opacity:.9;margin-top:4px">${NUM(done)}/${NUM(n)} उत्तर दिइयो</div></div></div>
+ <div class="wrap">
+ <div class="qcard" key="${q.id}">
+  <div class="qmeta"><span>प्रश्न <b>${NUM(c.idx+1)}</b> / ${NUM(n)} • ${TOPICS[q.t]||""}</span><span>अंक: ${NUM(RULE.mark)} <button class="bm" onclick="toggleBm('${q.id}')" aria-label="Bookmark">${S.bm[q.id]?"★":"☆"}</button></span></div>
+  <div class="qtext">${esc(q.q)}</div>
+  ${q.o.map((o,i)=>`<button class="opt ${a===i?'on':''}" onclick="pick(${i})"><span class="rd"></span><span><span class="lt">${LET[i]}.</span> ${esc(o)}</span></button>`).join("")}
+  <div class="navbtns">
+   <button class="btn ghost" onclick="go(-1)" ${c.idx===0?"disabled":""}>← अघिल्लो प्रश्न</button>
+   <button class="btn pri" onclick="go(1)" ${c.idx===n-1?"disabled":""}>अर्को प्रश्न →</button>
+   <button class="btn" onclick="skipQ()">प्रश्न छोड्नुहोस्</button>
+   <button class="btn ${c.mark[q.id]?'org':''}" onclick="markQ()">${c.mark[q.id]?"✓ समीक्षामा राखियो":"पछि समीक्षा गर्नुहोस्"}</button>
+   <button class="btn red full" onclick="askFinish()">परीक्षा समाप्त गर्नुहोस्</button>
+  </div>
+ </div>
+ <div class="card" style="margin-top:14px"><b style="font-size:.9rem">प्रश्न सूची</b>
+  <div class="palette">${c.ids.map((id,i)=>`<button class="${c.ans[id]!==undefined?'a':''} ${c.mark[id]?'m':''} ${i===c.idx?'c':''}" onclick="jump(${i})">${NUM(i+1)}</button>`).join("")}</div>
+  <div class="legend"><span><i style="background:var(--purple)"></i>उत्तर दिइएको</span><span><i style="background:var(--gold)"></i>पछि समीक्षा</span><span><i style="background:var(--line)"></i>बाँकी</span></div>
+ </div>
+ <p class="note" style="text-align:center">परीक्षाको बेला सही/गलत देखाइँदैन। गलत उत्तरमा ${fmt(RULE.neg)} अंक काटिन्छ; उत्तर नदिएमा अंक काटिँदैन।</p>
+ </div>`;
+};
+function pick(i){const c=S.current,id=c.ids[c.idx];c.ans[id]=i;save();render("exam")}
+function go(d){const c=S.current;c.idx=Math.max(0,Math.min(c.ids.length-1,c.idx+d));save();render("exam")}
+function jump(i){S.current.idx=i;save();render("exam")}
+function skipQ(){const c=S.current;delete c.ans[c.ids[c.idx]];if(c.idx<c.ids.length-1)c.idx++;save();render("exam")}
+function markQ(){const c=S.current,id=c.ids[c.idx];c.mark[id]=!c.mark[id];save();render("exam")}
+function toggleBm(id){if(S.bm[id])delete S.bm[id];else S.bm[id]=Date.now();save();render()}
+function askFinish(){const c=S.current;const left=c.ids.length-Object.keys(c.ans).length;const mk=Object.values(c.mark).filter(Boolean).length;
+ modal(`<h3 style="margin-top:0">परीक्षा समाप्त गर्ने?</h3>
+ ${left?`<div class="warnbox">⚠️ अझै <b>${NUM(left)}</b> प्रश्नको उत्तर दिइएको छैन।</div>`:`<p>तपाईंले सबै प्रश्नको उत्तर दिनुभएको छ। 👏</p>`}
+ ${mk?`<p class="note">${NUM(mk)} प्रश्न “पछि समीक्षा” मा छन्।</p>`:""}
+ <p class="note">बाँकी समय: ${clock(remaining())}</p>
+ <div class="row"><button class="btn red" onclick="closeModal();finish()">हो, बुझाउनुहोस्</button><button class="btn" onclick="closeModal()">फर्कनुहोस्</button></div>`)}
+
+/* result */
+function ringSVG(p,col){const r=70,C=2*Math.PI*r;return `<svg class="ring" viewBox="0 0 170 170"><circle cx="85" cy="85" r="${r}" fill="none" stroke="var(--line)" stroke-width="16"/>
+ <circle cx="85" cy="85" r="${r}" fill="none" stroke="${col}" stroke-width="16" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C}" transform="rotate(-90 85 85)" style="transition:stroke-dashoffset 1.2s ease" data-off="${C*(1-p/100)}"/>
+ <text x="85" y="82" text-anchor="middle" font-size="32" font-weight="700" fill="var(--ink)" font-family="Mukta">${fmt(p,0)}%</text><text x="85" y="108" text-anchor="middle" font-size="13" fill="var(--muted)" font-family="Mukta">प्रतिशत</text></svg>`}
+function animBars(){document.querySelectorAll("[data-w]").forEach(e=>e.style.width=e.dataset.w);document.querySelectorAll("[data-off]").forEach(e=>e.style.strokeDashoffset=e.dataset.off)}
+function getRes(){return S.history.find(h=>h.id===view.result)}
+function dur(s){const m=Math.floor(s/60),x=s%60;return NUM(m)+" मिनेट "+NUM(x)+" सेकेन्ड"}
+V.result=()=>{
+ const r=getRes(); if(!r) return V.home();
+ const col=r.pct>=60?"var(--ok)":r.pct>=40?"var(--gold)":"var(--bad)";
+ const prev=S.history.filter(h=>h.id!==r.id&&h.title===r.title)[0];
+ const ts=Object.entries(r.tstat).map(([t,v])=>({t,...v,p:v.n?v.r/v.n*100:0})).sort((a,b)=>a.p-b.p);
+ const weak=ts.filter(x=>x.p<50), improve=ts.filter(x=>x.p>=50&&x.p<80);
+ return topbar("नतिजा")+`<div class="wrap">
+ <div class="card" style="margin-top:16px" id="rcard">
+  <div class="rhead">${ringSVG(Math.max(0,r.pct),col)}
+  <div><div class="note">विद्यार्थी</div><div style="font-size:1.4rem;font-weight:700">${STUDENT.np}</div><div>${esc(r.title)}</div>
+   ${r.full?`<div class="passbig" style="color:${r.pass?'var(--ok)':'var(--bad)'}">${r.pass?"🎉 उत्तीर्ण":"अनुत्तीर्ण"} <span class="note">(अभ्यास नतिजा)</span></div><div class="note">उत्तीर्णाङ्क ${NUM(RULE.pass)}/${NUM(RULE.full)} को आधारमा</div>`
+   :`<div class="note" style="margin-top:6px">यो छोटो/अपूर्ण अभ्यास हो — पूर्ण वास्तविक परीक्षा होइन, त्यसैले उत्तीर्ण/अनुत्तीर्ण देखाइएको छैन।</div>`}
+  </div></div>
+  <div class="stats">
+   ${stat(NUM(r.n),"जम्मा प्रश्न")}${stat(NUM(r.right),"सही उत्तर","var(--ok)")}${stat(NUM(r.wrong),"गलत उत्तर","var(--bad)")}${stat(NUM(r.skip),"उत्तर नदिएका","var(--skip)")}
+   ${stat(NUM(r.fullMarks),"पूर्णाङ्क")}${stat(fmt(r.score),"प्राप्ताङ्क","var(--purple)")}${stat("−"+fmt(r.neg),"Negative Marking","var(--bad)")}${stat(fmt(r.pct,1)+"%","प्रतिशत")}
+   ${stat(dur(r.secs),"लागेको समय")}${stat(dt(r.date),"मिति")}
+  </div>
+  ${prev?`<div class="infobox">📊 अघिल्लो पटक यही सेटमा: ${fmt(prev.score)} अंक → अहिले ${fmt(r.score)} अंक (${r.score>=prev.score?"▲ +":"▼ "}${fmt(r.score-prev.score)})</div>`:""}
+ </div>
+ <h2 class="sec">विषयगत प्रदर्शन</h2>
+ <div class="card">${ts.map(x=>`<div class="tp"><div class="h"><span>${TOPICS[x.t]}</span><span>${NUM(x.r)}/${NUM(x.n)} • ${fmt(x.p,0)}%</span></div><div class="bar"><i data-w="${x.p}%" style="background:${TCOL[x.t]}"></i></div></div>`).join("")}
+ <p><b>कमजोर विषय:</b> ${weak.length?weak.map(x=>TOPICS[x.t]).join(", "):"छैन 👏"}</p>
+ <p style="margin:0"><b>सुधार गर्नुपर्ने विषय:</b> ${improve.length?improve.map(x=>TOPICS[x.t]).join(", "):"—"}</p></div>
+ <div class="row noprint" style="margin-top:16px">
+  <button class="btn pri" onclick="render('review')">📝 सम्पूर्ण उत्तर समीक्षा</button>
+  ${r.wrong?`<button class="btn red" onclick="retryWrong()">✗ गलत प्रश्न मात्र पुनः</button>`:""}
+  <button class="btn org" onclick="downloadCard()">⬇ Result Card (PNG)</button>
+  ${FRAMED?"":`<button class="btn" onclick="window.print()">🖨 Print</button>`}
+  <button class="btn ghost" onclick="render('home')">गृहपृष्ठ</button>
+ </div></div>`;
+};
+function stat(v,l,c){return `<div class="stat"><b style="${c?'color:'+c:''}">${v}</b><span>${l}</span></div>`}
+function retryWrong(){const r=getRes();const ids=r.items.filter(i=>i.st==="bad").map(i=>i.id);withGuard(()=>{startExam({title:"गलत प्रश्न पुनः — "+r.title,ids,kind:"retry"})})}
+
+V.review=()=>{
+ const r=getRes(); if(!r) return V.home(); const f=view.filter;
+ const list=r.items.filter(i=>f==="all"||i.st===f);
+ const cnt=s=>NUM(r.items.filter(i=>i.st===s).length);
+ return topbar("उत्तर समीक्षा")+`<div class="wrap"><div style="margin-top:14px" class="tabs">
+ ${[["all","सबै ("+NUM(r.items.length)+")"],["ok","✓ सही ("+cnt("ok")+")"],["bad","✗ गलत ("+cnt("bad")+")"],["skip","उत्तर नदिएका ("+cnt("skip")+")"]].map(([k,l])=>`<button class="${f===k?'on':''}" onclick="view.filter='${k}';render('review')">${l}</button>`).join("")}
+ <button onclick="render('result')">← नतिजा</button></div>
+ ${list.map(it=>{const q=byId(it.id); if(!q)return""; const n=r.items.indexOf(it)+1; return reviewCard(q,it,n)}).join("")||'<p class="note">यस समूहमा प्रश्न छैन।</p>'}
+ </div>`;
+};
+function reviewCard(q,it,n){
+ const lab={ok:"✓ सही",bad:"✗ गलत",skip:"उत्तर दिइएन"}[it.st];
+ return `<div class="rv ${it.st}"><div class="row" style="justify-content:space-between"><span class="tag">${lab}</span><span class="note">प्रश्न ${NUM(n)} • ${TOPICS[q.t]} • ${it.m>0?"+":""}${fmt(it.m)} अंक <button class="bm" onclick="toggleBm('${q.id}')">${S.bm[q.id]?"★":"☆"}</button></span></div>
+ <div class="qtext" style="font-size:1.08rem;margin-top:8px">${esc(q.q)}</div>
+ ${q.o.map((o,i)=>`<div class="ro ${i===q.a?'right':''} ${i===it.a&&i!==q.a?'mine':''}">${LET[i]}. ${esc(o)} ${i===q.a?" ✓":""}${i===it.a&&i!==q.a?" ✗ (तपाईंको उत्तर)":""}${i===it.a&&i===q.a?" (तपाईंको उत्तर)":""}</div>`).join("")}
+ <div class="note" style="margin-top:6px">तपाईंको उत्तर: <b>${it.a===null?"दिइएन":LET[it.a]+". "+esc(q.o[it.a])}</b> • सही उत्तर: <b>${LET[q.a]}. ${esc(q.o[q.a])}</b></div>
+ ${expl(q)}</div>`;
+}
+function expl(q){return `<div class="exp"><h4>✅ सही उत्तर किन सही?</h4><p>${esc(q.why)}</p><h4>❌ अन्य विकल्प किन गलत?</h4><p>${esc(q.wrong)}</p>${q.tip?`<h4>💡 सम्झने सजिलो तरिका</h4><p>${esc(q.tip)}</p>`:""}
+ <h4>📌 स्रोत</h4><p class="note">${q.year?esc(q.year)+" साल • ":(q.set?"२०८३ सम्भावित Model Set "+q.set+" (अभ्यास प्रश्न) • ":"")}${esc(q.src||"")} <span class="pill pri-${q.p||'M'}">${PRI[q.p||'M']}</span></p></div>`}
+
+V.topics=()=>topbar("विषयअनुसार परीक्षा")+`<div class="wrap"><h2 class="sec">विषय छान्नुहोस्</h2><div class="modes">
+ ${Object.keys(TOPICS).map(t=>{const n=allQ().filter(q=>q.t===t).length;return n?mode("●",TCOL[t],TOPICS[t],NUM(n)+" प्रश्न",`startTopic('${t}')`):""}).join("")}</div>
+ <div class="infobox">समसामयिक विषयका प्रश्न अनलाइन स्रोतबाट ताजा रूपमा प्रमाणित गर्न नसकिएकाले राखिएका छैनन् — परीक्षाअघि पत्रपत्रिका र आयोगको सूचना पढ्नुहोस्।</div></div>`;
+
+V.guide=()=>{const g=view.guideSet; const qs=allQ().filter(q=>g==="all"?true:(g.startsWith("T:")?q.t===g.slice(2):q.set===g));
+ return topbar("Study Guide")+`<div class="wrap"><div class="tabs" style="margin-top:14px">
+ ${[["A","Model Set A"],["B","Model Set B"],["all","सबै"]].concat(Object.keys(TOPICS).filter(t=>allQ().some(q=>q.t===t)).map(t=>["T:"+t,TOPICS[t]])).map(([k,l])=>`<button class="${g===k?'on':''}" onclick="view.guideSet='${k}';render('guide')">${l}</button>`).join("")}</div>
+ ${qs.map((q,i)=>`<div class="rv"><div class="row" style="justify-content:space-between"><span class="note">${NUM(i+1)}. ${TOPICS[q.t]}</span><button class="bm" onclick="toggleBm('${q.id}')">${S.bm[q.id]?"★":"☆"}</button></div>
+ <div class="qtext" style="font-size:1.05rem">${esc(q.q)}</div>${q.o.map((o,j)=>`<div class="ro ${j===q.a?'right':''}">${LET[j]}. ${esc(o)}${j===q.a?" ✓":""}</div>`).join("")}${expl(q)}</div>`).join("")}</div>`};
+
+V.bookmarks=()=>{const ids=Object.keys(S.bm).filter(byId);return topbar("Bookmark प्रश्न")+`<div class="wrap"><div class="row" style="margin-top:14px"><button class="btn pri" onclick="startBm()" ${ids.length?"":"disabled"}>यी प्रश्नको परीक्षा दिनुहोस्</button></div>
+ ${ids.map((id,i)=>{const q=byId(id);return `<div class="rv"><div class="row" style="justify-content:space-between"><span class="note">${NUM(i+1)}. ${TOPICS[q.t]}</span><button class="bm" onclick="toggleBm('${q.id}')">★</button></div><div class="qtext" style="font-size:1.05rem">${esc(q.q)}</div>${q.o.map((o,j)=>`<div class="ro ${j===q.a?'right':''}">${LET[j]}. ${esc(o)}</div>`).join("")}${expl(q)}</div>`}).join("")||'<p class="note">परीक्षा वा Study Guide मा ☆ थिचेर प्रश्न Bookmark गर्नुहोस्।</p>'}</div>`};
+
+V.progress=()=>{const h=S.history; const days={}; h.forEach(x=>{const d=x.date.slice(0,10);days[d]=(days[d]||0)+x.n});
+ const last=h.slice(0,12).reverse(); const W=320,H=140;
+ const pts=last.map((x,i)=>[20+(last.length<2?0:i*(W-40)/(last.length-1)),H-20-Math.max(0,x.pct)/100*(H-40)]);
+ const tAll={}; h.forEach(x=>Object.entries(x.tstat).forEach(([t,v])=>{const a=tAll[t]||(tAll[t]={n:0,r:0});a.n+=v.n;a.r+=v.r}));
+ return topbar("प्रगति रिपोर्ट")+`<div class="wrap">
+ <div class="stats" style="margin-top:16px">${stat(NUM(h.length),"जम्मा परीक्षा")}${stat(NUM(h.reduce((a,x)=>a+x.n,0)),"अभ्यास गरिएका प्रश्न")}${stat(h.length?fmt(h.reduce((a,x)=>a+x.pct,0)/h.length,1)+"%":"—","औसत प्रतिशत")}${stat(h.length?fmt(Math.max(...h.map(x=>x.pct)),1)+"%":"—","उत्कृष्ट प्रतिशत")}${stat(NUM(Object.keys(days).length),"अभ्यास गरेका दिन")}</div>
+ ${last.length?`<h2 class="sec">पछिल्ला परीक्षाको प्रतिशत</h2><div class="card"><svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">
+  ${[0,50,100].map(v=>`<line x1="20" x2="${W-20}" y1="${H-20-v/100*(H-40)}" y2="${H-20-v/100*(H-40)}" stroke="var(--line)"/><text x="0" y="${H-16-v/100*(H-40)}" font-size="10" fill="var(--muted)">${NUM(v)}</text>`).join("")}
+  <polyline fill="none" stroke="url(#gg)" stroke-width="3" points="${pts.map(p=>p.join(",")).join(" ")}"/>
+  <defs><linearGradient id="gg"><stop offset="0" stop-color="#4f46e5"/><stop offset="1" stop-color="#f97316"/></linearGradient></defs>
+  ${pts.map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="4" fill="#7c3aed"/>`).join("")}</svg></div>`:""}
+ ${Object.keys(tAll).length?`<h2 class="sec">समग्र विषयगत प्रदर्शन</h2><div class="card">${Object.entries(tAll).map(([t,v])=>{const p=v.r/v.n*100;return `<div class="tp"><div class="h"><span>${TOPICS[t]}</span><span>${fmt(p,0)}%</span></div><div class="bar"><i style="width:${p}%;background:${TCOL[t]}"></i></div></div>`}).join("")}</div>`:""}
+ <h2 class="sec">दैनिक अभ्यासको इतिहास</h2><div class="card">${h.length?`<table class="t"><tr><th>मिति</th><th>परीक्षा</th><th>अंक</th><th>%</th></tr>${h.map(x=>`<tr onclick="view.result=${x.id};render('result')" style="cursor:pointer"><td>${dt(x.date)}</td><td>${esc(x.title)}</td><td>${fmt(x.score)}/${NUM(x.fullMarks)}</td><td>${fmt(x.pct,0)}</td></tr>`).join("")}</table>`:'<p class="note">अहिलेसम्म कुनै परीक्षा दिइएको छैन।</p>'}</div></div>`};
+
+V.analysis=()=>{const by={};DB.forEach(q=>{(by[q.t]=by[q.t]||{H:[],M:[],L:[]})[q.p].push(q)});
+ return topbar("विषय विश्लेषण")+`<div class="wrap">
+ <div class="warnbox" style="margin-top:16px"><b>विश्लेषणको आधार:</b> प्रमाणित पुराना प्रश्नपत्र उपलब्ध नभएकाले प्रश्न कति पटक दोहोरियो भन्ने गणना गर्न सकिएन। त्यसैले यहाँको प्राथमिकता <b>आयोगको पाठ्यक्रमका मुख्य विषय, संविधान/ऐनका आधारभूत तथ्य र शिक्षक तयारी सामग्रीमा सधैँ समेटिने अवधारणा</b> का आधारमा मात्र दिइएको हो। कुनै अनुमानित प्रतिशत देखाइएको छैन।</div>
+ ${Object.entries(by).map(([t,v])=>`<div class="card" style="margin:10px 0"><b style="color:${TCOL[t]}">${TOPICS[t]}</b> <span class="note">(${NUM(v.H.length+v.M.length+v.L.length)} अभ्यास प्रश्न)</span>
+ ${["H","M","L"].map(p=>v[p].length?`<div style="margin-top:6px"><span class="pill pri-${p}">${PRI[p]}</span><ul style="margin:4px 0;padding-left:20px;font-size:.92rem">${v[p].map(q=>`<li>${esc(q.q)}</li>`).join("")}</ul></div>`:"").join("")}</div>`).join("")}
+ </div>`};
+
+V.rules=()=>topbar("परीक्षा नियम र स्रोत")+`<div class="wrap"><div class="card" style="margin-top:16px"><table class="t">
+ <tr><td>जम्मा प्रश्न</td><td><b>${NUM(RULE.total)}</b> वस्तुगत (बहुवैकल्पिक)</td></tr><tr><td>प्रतिप्रश्न अंक</td><td><b>${NUM(RULE.mark)}</b></td></tr>
+ <tr><td>पूर्णाङ्क</td><td><b>${NUM(RULE.full)}</b></td></tr><tr><td>उत्तीर्णाङ्क</td><td><b>${NUM(RULE.pass)}</b></td></tr>
+ <tr><td>समय</td><td><b>${NUM(RULE.minutes)} मिनेट</b> (१ घण्टा)</td></tr><tr><td>गलत उत्तर</td><td>प्रतिप्रश्न अंकको २०% = <b>${fmt(RULE.neg)}</b> अंक कट्टा</td></tr><tr><td>उत्तर नदिएमा</td><td>अंक काटिँदैन (० अंक)</td></tr></table>
+ <p class="note">प्राप्ताङ्क = (सही × २) − (गलत × ०.४)</p></div>
+ <div class="warnbox">यी नियम सार्वजनिक समाचार र तयारी स्रोतबाट लिइएका हुन्, आयोगको मूल विज्ञापन पढ्न सकिएन। परीक्षाअघि <b>tsc.gov.np</b> मा प्रकाशित आफ्नो विज्ञापन/पाठ्यक्रममा अवश्य पुष्टि गर्नुहोस्। नियम फरक भएमा एपको अंक गणना पनि फरक हुन सक्छ।</div>
+ <div class="card"><b>स्रोतहरू</b><ul style="font-size:.9rem">
+ <li>नेपाल न्युज — शिक्षक सेवा आयोगको नयाँ परीक्षा ढाँचा (५० प्रश्न × २ अंक, उत्तीर्णाङ्क ५०)</li>
+ <li>Edusanjal — Third level basic primary and lower secondary teacher exam (१ घण्टा, पूर्णाङ्क १००, उत्तीर्णाङ्क ५०)</li>
+ <li>Loksewa Tayari — Lower secondary first paper syllabus (२०% नेगेटिभ मार्किङ)</li>
+ <li>आधारभूत तह तृतीय श्रेणी खुला प्रतियोगितात्मक परीक्षाको पाठ्यक्रम २०७६ (सरकारी वेबसाइटमा प्रकाशित प्रति)</li>
+ <li>प्रश्नका तथ्य: नेपालको संविधान, शिक्षा ऐन २०२८, शिक्षा नियमावली २०५९, शिक्षक सेवा आयोग नियमावली २०५७, मानक शैक्षिक मनोविज्ञान पाठ्यपुस्तक (प्रत्येक प्रश्नमा उल्लेख)</li></ul></div></div>`;
+
+V.data=()=>topbar("डाटा र प्रश्न थप")+`<div class="wrap">
+ <h2 class="sec">ब्याकअप (फोन फेर्दा काम लाग्छ)</h2><div class="card"><p class="note">तपाईंको इतिहास, गलत प्रश्न र Bookmark यही ब्राउजरमा मात्र सुरक्षित छन्। ब्राउजर डाटा मेटाउनुअघि ब्याकअप लिनुहोस्।</p>
+ <div class="row"><button class="btn pri" onclick="exportData()">⬇ ब्याकअप डाउनलोड</button><label class="btn">⬆ ब्याकअप फिर्ता<input type="file" accept=".json" hidden onchange="importFile(this,'backup')"></label></div></div>
+ <h2 class="sec">प्रमाणित पुराना प्रश्न थप्नुहोस्</h2><div class="card">
+ <p class="note">आयोगको प्रश्नपत्रबाट प्रमाणित प्रश्न मात्र थप्नुहोस्। प्रत्येक प्रश्नमा साल (year) र स्रोत (src) अनिवार्य छ। a = सही उत्तरको क्रम (क=०, ख=१, ग=२, घ=३)। t = विषय कोड: ${Object.keys(TOPICS).join(", ")}।</p>
+ <textarea id="imp">[{"year":"२०८१","t":"const","p":"H","q":"प्रश्न यहाँ","o":["क","ख","ग","घ"],"a":0,"why":"व्याख्या","wrong":"अन्य विकल्प किन गलत","tip":"","src":"tsc.gov.np प्रश्नपत्र, २०८१","repeat":1}]</textarea>
+ <div class="row" style="margin-top:8px"><button class="btn org" onclick="importQs($('#imp').value)">प्रश्न थप्नुहोस्</button><label class="btn">JSON फाइल छान्नुहोस्<input type="file" accept=".json" hidden onchange="importFile(this,'qs')"></label>
+ ${(S.imported||[]).length?`<button class="btn red" onclick="askYes('थपिएका सबै प्रश्न हटाउने?',()=>{S.imported=[];save();render()})">थपिएका ${NUM(S.imported.length)} प्रश्न हटाउनुहोस्</button>`:""}</div></div>
+ <h2 class="sec">होम स्क्रिनमा राख्नुहोस्</h2><div class="card note"><b>iPhone (Safari):</b> तलको Share ⬆ बटन → “Add to Home Screen”।<br><b>Android (Chrome):</b> माथि ⋮ मेनु → “Add to Home screen” / “Install app”।<br>एक पटक खोलेपछि इन्टरनेट नभए पनि अभ्यास गर्न मिल्छ (होस्ट गरिएको PWA संस्करणमा)।</div></div>`;
+function download(name,text,type="application/json"){const b=text instanceof Blob?text:new Blob([text],{type});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+function exportData(){const t=JSON.stringify(S);if(!FRAMED){download("sangita-tsc-backup.json",t);return}modal(`<h3 style="margin-top:0">ब्याकअप</h3><p class="note">यो पाठ कपी गरेर सुरक्षित राख्नुहोस्।</p><textarea id="bk" readonly>${esc(t)}</textarea><div class="row" style="margin-top:8px"><button class="btn pri" id="cpb">कपी गर्नुहोस्</button><button class="btn" onclick="closeModal()">बन्द</button></div>`);$("#cpb").onclick=()=>{const el=$("#bk");(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast("कपी भयो ✓")).catch(()=>{el.select()})}}
+function importFile(inp,kind){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{if(kind==="qs")importQs(r.result);else{try{const v=JSON.parse(r.result);if(!v.history)throw 0;S=Object.assign(S,v);save();toast("ब्याकअप फिर्ता भयो ✓");render("home")}catch(e){toast("फाइल मिलेन।")}}};r.readAsText(f)}
+function importQs(txt){let arr;try{arr=JSON.parse(txt)}catch(e){toast("JSON ढाँचा मिलेन।");return}
+ if(!Array.isArray(arr))arr=[arr];let ok=0,bad=0;
+ arr.forEach((q,i)=>{if(q&&YEARS.includes(q.year)&&q.q&&Array.isArray(q.o)&&q.o.length===4&&Number.isInteger(q.a)&&q.a>=0&&q.a<4&&q.src&&TOPICS[q.t]){
+   q.id="Y"+q.year+"-"+Date.now().toString(36)+i;q.p=q.p||"M";q.why=q.why||"";q.wrong=q.wrong||"";S.imported.push(q);ok++}else bad++});
+ save();toast(NUM(ok)+" प्रश्न थपियो"+(bad?", "+NUM(bad)+" अमान्य":""));render()}
+
+/* result card PNG */
+function downloadCard(){const r=getRes();const c=document.createElement("canvas");const W=1080,H=1350;c.width=W;c.height=H;const x=c.getContext("2d");
+ const g=x.createLinearGradient(0,0,W,0);g.addColorStop(0,"#4f46e5");g.addColorStop(1,"#7c3aed");x.fillStyle="#f4f3ff";x.fillRect(0,0,W,H);x.fillStyle=g;x.fillRect(0,0,W,300);
+ const F=(s,w=400)=>`${w} ${s}px Mukta, sans-serif`;x.fillStyle="#fff";x.font=F(40);x.fillText("शिक्षक सेवा आयोग २०८३ • निम्नमाध्यमिक तह",60,90);x.font=F(72,700);x.fillText("संगीता सुनार",60,190);x.font=F(36);x.fillText(r.title.slice(0,48),60,255);
+ x.beginPath();x.lineWidth=40;x.strokeStyle="#e4e2f5";x.arc(W/2,560,180,0,7);x.stroke();x.beginPath();x.strokeStyle=r.pct>=60?"#16a34a":r.pct>=40?"#f59e0b":"#dc2626";x.lineCap="round";x.arc(W/2,560,180,-Math.PI/2,-Math.PI/2+Math.max(0.001,Math.max(0,r.pct)/100*2*Math.PI));x.stroke();
+ x.fillStyle="#1e1b4b";x.textAlign="center";x.font=F(96,700);x.fillText(fmt(r.pct,0)+"%",W/2,590);x.font=F(36);x.fillText(fmt(r.score)+" / "+NUM(r.fullMarks)+" अंक",W/2,645);
+ if(r.full){x.font=F(56,700);x.fillStyle=r.pass?"#16a34a":"#dc2626";x.fillText(r.pass?"उत्तीर्ण (अभ्यास)":"अनुत्तीर्ण (अभ्यास)",W/2,830)}
+ x.textAlign="left";const rows=[["जम्मा प्रश्न",NUM(r.n)],["सही",NUM(r.right)],["गलत",NUM(r.wrong)],["उत्तर नदिएका",NUM(r.skip)],["Negative Marking","−"+fmt(r.neg)],["समय",dur(r.secs)]];
+ rows.forEach((rw,i)=>{const cx=60+(i%2)*500,cy=920+Math.floor(i/2)*110;x.fillStyle="#fff";x.fillRect(cx,cy,460,90);x.fillStyle="#5b5a7a";x.font=F(30);x.fillText(rw[0],cx+24,cy+38);x.fillStyle="#1e1b4b";x.font=F(38,700);x.fillText(rw[1],cx+24,cy+78)});
+ x.fillStyle="#5b5a7a";x.font=F(26);x.fillText(dt(r.date,1)+" • TSC स्मार्ट परीक्षा",60,1300);
+ const url=c.toDataURL("image/png");modal(`<h3 style="margin-top:0">Result Card</h3><img src="${url}" style="width:100%;border-radius:12px"><p class="note">फोनमा: फोटोमा लामो थिचेर “Save Image/Download image” छान्नुहोस्।</p><div class="row">${FRAMED?"":`<button class="btn org" id="dlc">⬇ डाउनलोड</button>`}<button class="btn" onclick="closeModal()">बन्द</button></div>`);if(!FRAMED)$("#dlc").onclick=()=>c.toBlob(b=>download("sangita-result-card.png",b,"image/png"))}
+
+/* ui helpers */
+function modal(h){closeModal();const d=document.createElement("div");d.className="modal";d.id="mdl";d.innerHTML=`<div class="box">${h}</div>`;d.onclick=e=>{if(e.target===d)closeModal()};document.body.appendChild(d)}
+function closeModal(){const m=$("#mdl");if(m)m.remove()}
+function toast(t){const d=document.createElement("div");d.textContent=t;d.style.cssText="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1e1b4b;color:#fff;padding:10px 18px;border-radius:14px;z-index:70;font-size:.95rem;max-width:90vw;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.3)";document.body.appendChild(d);setTimeout(()=>d.remove(),2600)}
+function confetti(){const c=$("#confetti"),x=c.getContext("2d");c.width=innerWidth;c.height=innerHeight;const cols=["#4f46e5","#7c3aed","#f97316","#f59e0b","#16a34a","#db2777"];
+ const P=Array.from({length:160},()=>({x:Math.random()*c.width,y:-20-Math.random()*c.height*.5,r:4+Math.random()*6,c:cols[Math.random()*6|0],vy:2+Math.random()*3,vx:-1.5+Math.random()*3,a:Math.random()*6}));let f=0;
+ (function loop(){x.clearRect(0,0,c.width,c.height);P.forEach(p=>{p.y+=p.vy;p.x+=p.vx;p.a+=.1;x.fillStyle=p.c;x.save();x.translate(p.x,p.y);x.rotate(p.a);x.fillRect(-p.r/2,-p.r/2,p.r,p.r*.6);x.restore()});if(++f<220)requestAnimationFrame(loop);else x.clearRect(0,0,c.width,c.height)})()}
+document.addEventListener("visibilitychange",()=>{if(document.hidden&&S.current)save()});
+/*PWA_SW*/
+render(S.current?"home":"home");
+</script>
+</body>
+</html>
