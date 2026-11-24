@@ -52,7 +52,7 @@ h2.sec:before{content:"";width:6px;height:22px;border-radius:4px;background:line
 .setcard{text-align:left;color:var(--ink);background:var(--card);border-radius:20px;padding:14px;border:1px solid var(--line);box-shadow:var(--shadow);transition:transform .15s;position:relative;min-height:118px}
 .setcard:active{transform:scale(.97)}
 .setcard .no{font-size:.75rem;font-weight:700;color:var(--purple);letter-spacing:.04em}
-.setcard .yr{font-size:1.35rem;font-weight:700;line-height:1.3}
+.setcard .yr{font-size:1.25rem;font-weight:700;line-height:1.3}
 .setcard .st{font-size:.78rem;color:var(--muted)}
 .setcard.na{opacity:.72}
 .setcard.na .yr{color:var(--muted)}
@@ -142,6 +142,7 @@ textarea{width:100%;min-height:120px;border-radius:12px;border:1px solid var(--l
 select{font:inherit;padding:8px 10px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:60}
 .pri-H{color:#fff;background:#dc2626}.pri-M{color:#fff;background:#f59e0b}.pri-L{color:#fff;background:#64748b}
+.fig{display:block;max-width:100%;border-radius:12px;border:1px solid var(--line);margin:6px 0 10px;background:#fff}
 .pill{font-size:.72rem;padding:1px 8px;border-radius:99px;font-weight:700}
 footer{text-align:center;font-size:.78rem;color:var(--muted);margin-top:30px}
 @media print{header.top,.noprint{display:none!important}.rv{break-inside:avoid}}
@@ -153,6 +154,7 @@ footer{text-align:center;font-size:.78rem;color:var(--muted);margin-top:30px}
 <script>
 "use strict";
 const DB = __DB__;
+const PAPERS = __PAPERS__;
 const FRAMED = (()=>{try{return window.self!==window.top}catch(e){return true}})();
 const STUDENT = {np:"संगीता सुनार", en:"Sangita Sunar"};
 /* आधिकारिक ढाँचा (स्रोत: स्रोत प्रतिवेदन हेर्नुहोस्) */
@@ -189,12 +191,13 @@ function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.rando
 
 /* ---------- sets ---------- */
 function setDefs(){
- const ys = YEARS.map((y,i)=>{const n=yearQs(y).length;return {key:"Y"+y,no:i+1,title:y+" साल",kind:"year",year:y,
-   avail:n>0, st:n? NUM(n)+" प्रमाणित प्रश्न"+(n<RULE.total?" (अपूर्ण)":""): "प्रमाणित प्रश्नपत्र उपलब्ध छैन"}});
- ys.push({key:"A",no:11,title:"२०८३ Model Set A",kind:"model",avail:true,st:"५० प्रश्न • सम्भावित अभ्यास"});
- ys.push({key:"B",no:12,title:"२०८३ Model Set B",kind:"model",avail:true,st:"५० प्रश्न • सम्भावित अभ्यास"});
- return ys;
+ const ps=PAPERS.map(p=>({key:p.key,kind:p.guess?"model":"paper",year:p.year,title:p.year+" साल",lv:p.lv,sub:p.sub,mine:p.mine,avail:true,
+   n:DB.filter(q=>q.paper===p.key).length,full:p}));
+ ps.push({key:"A",kind:"model",title:"२०८३ साल",lv:"अनुमानित सेट A",sub:"यस एपको अनुमानित सेट",n:50,avail:true});
+ ps.push({key:"B",kind:"model",title:"२०८३ साल",lv:"अनुमानित सेट B",sub:"यस एपको अनुमानित सेट",n:50,avail:true});
+ return ps;
 }
+function paperQs(k){return DB.filter(q=>q.paper===k).sort((a,b)=>a.n-b.n)}
 function quickIds(){
  const pick=s=>DB.filter(q=>q.set===s&&q.p==="H");
  const take=(arr)=>{const seen={},out=[];for(const q of arr){if(!seen[q.t]&&out.length<6){seen[q.t]=1;out.push(q)}}for(const q of arr){if(out.length<6&&!out.includes(q))out.push(q)}return out};
@@ -246,7 +249,7 @@ function finish(){
 }
 
 /* ---------- views ---------- */
-const view={name:"home",result:null,filter:"all",topic:"const",guideSet:"A"};
+const view={name:"home",result:null,filter:"all",topic:"const",guideSet:PAPERS.length?PAPERS[0].key:"A"};
 function render(name){ if(name)view.name=name; window.scrollTo(0,0); const f=V[view.name]||V.home; $("#app").innerHTML=f(); if(view.name==="exam")startTimer(); else stopTimer(); if(view.name==="result")setTimeout(animBars,60); }
 function topbar(title,back=true){
  return `<header class="top"><div class="in">${back?`<button class="iconbtn" onclick="render('home')" aria-label="गृहपृष्ठ">⌂</button>`:""}
@@ -260,34 +263,32 @@ const V={};
 V.home=()=>{
  const sets=setDefs(); const c=S.current; const last=S.history[0];
  const wrongN=Object.keys(S.wrong).filter(byId).length, bmN=Object.keys(S.bm).filter(byId).length;
- return topbar("TSC स्मार्ट परीक्षा २०८३",false)+`<div class="wrap">
- <div class="hero"><h1>नमस्ते, संगीता सुनार! 🌸</h1><p>तपाईंको सफलताको यात्रा आजैबाट सुरु हुन्छ।</p>
- <div class="chips"><span class="chip">शिक्षक सेवा आयोग</span><span class="chip">निम्नमाध्यमिक तह</span><span class="chip">तृतीय श्रेणी</span><span class="chip">प्रथम पत्र — सामान्य परीक्षा</span><span class="chip">📍 पोखरा, गण्डकी</span></div></div>
+ const realN=DB.filter(q=>q.paper&&!PAPERS.find(p=>p.key===q.paper).guess).length;
+ const card=s=>`<button class="setcard ${s.kind==='model'?'model':''}" onclick="openSet('${s.key}')">
+  <span class="badge ${s.kind==='model'?'gold':(s.mine?'green':'')}">${s.kind==='model'?'अनुमानित':(s.mine?'मेरो तह':'वास्तविक')}</span>
+  <div class="yr">${s.title}</div><div class="st"><b>${s.lv||""}</b>${s.lv?"<br>":""}${s.sub}${s.n?" • "+NUM(s.n)+" प्रश्न":""}</div></button>`;
+ return topbar("TSC परीक्षा अभ्यास",false)+`<div class="wrap">
+ <div class="hero"><h1>नमस्ते, संगीता सुनार! 🌸</h1><p>तपाईंको सफलताको यात्रा आजैबाट सुरु हुन्छ।</p></div>
  ${installCard()}${backupCard()}
  ${c?`<div class="card" style="border-color:var(--orange)"><b>⏸ अधुरो परीक्षा: ${esc(c.title)}</b><div class="note">${NUM(Object.keys(c.ans).length)}/${NUM(c.ids.length)} उत्तर दिइएको • बाँकी समय ${clock(remaining())}</div>
   <div class="row" style="margin-top:8px"><button class="btn org" onclick="render('exam')">पुनः सुरु गर्नुहोस्</button><button class="btn ghost" onclick="abandon()">रद्द गर्नुहोस्</button></div></div>`:""}
  ${last?`<div class="card" style="margin-top:12px"><div class="row" style="justify-content:space-between"><div><b>अन्तिम परीक्षा:</b> ${esc(last.title)}<div class="note">${fmt(last.score)}/${NUM(last.fullMarks)} अंक • ${fmt(last.pct,1)}%</div></div><button class="btn" onclick="view.result=${last.id};render('result')">नतिजा हेर्नुहोस्</button></div></div>`:""}
- <h2 class="sec">१२ परीक्षा सेट</h2>
- <div class="grid">${sets.map(s=>`<button class="setcard ${s.kind==='model'?'model':''} ${s.avail?'':'na'}" onclick="openSet('${s.key}')">
-  <span class="badge ${s.kind==='model'?'gold':(s.avail?'green':'')}">${s.kind==='model'?'सम्भावित':(s.avail?'उपलब्ध':'उपलब्ध छैन')}</span>
-  <div class="no">SET ${NUM(String(s.no).padStart(2,"0"))}</div><div class="yr">${s.title}</div><div class="st">${s.st}</div></button>`).join("")}</div>
- <div class="warnbox">⚠️ <b>इमानदार जानकारी:</b> २०७३–२०८२ का वास्तविक प्रश्नपत्र यो एपमा अहिले राखिएका छैनन्, किनभने तिनलाई दुई विश्वसनीय स्रोतबाट प्रमाणित गर्न सकिएन। काल्पनिक प्रश्नलाई ‘पुरानो प्रश्न’ भनेर राखिएको छैन। वास्तविक प्रश्नपत्र पाएपछि <a href="#" onclick="render('data');return false">“प्रश्न थप्नुहोस्”</a> बाट सम्बन्धित सालमा थप्न सकिन्छ।</div>
- <h2 class="sec">स्मार्ट अभ्यास मोड</h2>
+ <h2 class="sec">पुराना वास्तविक प्रश्नपत्र — साल छान्नुहोस्</h2>
+ <div class="grid">${sets.filter(s=>s.kind==="paper").map(card).join("")}</div>
+ <p class="note">२०७३–२०७७ र २०७९ सालका वस्तुगत प्रश्नपत्र भेटिएनन्। ती सालमा खुला सामान्य परीक्षा नै नभएको पनि हुन सक्छ।</p>
+ <h2 class="sec">२०८३ का लागि अनुमानित प्रश्न</h2>
+ <div class="grid">${sets.filter(s=>s.kind==="model").map(card).join("")}
+  <button class="setcard model" onclick="startQuick()"><span class="badge gold">छिटो</span><div class="yr">Quick Test</div><div class="st">१२ प्रश्न • १५ मिनेट</div></button></div>
+ <h2 class="sec">अभ्यास</h2>
  <div class="modes">
-  ${mode("⚡","linear-gradient(135deg,#f97316,#f59e0b)","Special Quick Test (१२ प्रश्न)","Set A र B बाट ६–६ उच्च प्राथमिकताका प्रश्न","startQuick()")}
-  ${mode("🎲","linear-gradient(135deg,#4f46e5,#7c3aed)","Random Exam (सबै मिसाएर)","उपलब्ध सबै प्रश्नबाट ५० प्रश्न","startRandom()")}
-  ${mode("🔥","linear-gradient(135deg,#dc2626,#f97316)","उच्च प्राथमिकताका प्रश्न","पाठ्यक्रममा मुख्य विषयका प्रश्न","startPri()")}
-  ${mode("🔁","linear-gradient(135deg,#0891b2,#2563eb)","बारम्बार दोहोरिएका प्रश्न","प्रमाणित पुरानो प्रश्नमा आधारित","startRepeat()")}
-  ${mode("✗","linear-gradient(135deg,#be123c,#e11d48)","गलत प्रश्नको पुनः अभ्यास",NUM(wrongN)+" प्रश्न","startWrong()")}
-  ${mode("📚","linear-gradient(135deg,#16a34a,#0d9488)","विषयअनुसार परीक्षा","संविधान, मनोविज्ञान, IQ …","render('topics')")}
-  ${mode("📖","linear-gradient(135deg,#7c3aed,#db2777)","Study Guide","प्रश्न र उत्तर सँगसँगै पढ्नुहोस्","render('guide')")}
-  ${mode("★","linear-gradient(135deg,#f59e0b,#eab308)","Bookmark प्रश्न",NUM(bmN)+" सुरक्षित प्रश्न","render('bookmarks')")}
-  ${mode("📈","linear-gradient(135deg,#2563eb,#4f46e5)","प्रगति रिपोर्ट र इतिहास","अंक तुलना, दैनिक अभ्यास","render('progress')")}
-  ${mode("🧭","linear-gradient(135deg,#9333ea,#4f46e5)","विषय विश्लेषण र प्राथमिकता","कुन विषय कति महत्त्वपूर्ण","render('analysis')")}
-  ${mode("🗂","linear-gradient(135deg,#475569,#64748b)","डाटा, ब्याकअप र प्रश्न थप","Export/Import, वास्तविक प्रश्न थप्ने","render('data')")}
-  ${mode("ℹ","linear-gradient(135deg,#0f766e,#16a34a)","परीक्षा नियम र स्रोत","अंक, समय, नेगेटिभ मार्किङ","render('rules')")}
+  ${mode("🎲","linear-gradient(135deg,#4f46e5,#7c3aed)","सबै साल मिसाएर परीक्षा",NUM(realN)+" वास्तविक प्रश्नबाट ५० प्रश्न","startRandom()")}
+  ${mode("✗","linear-gradient(135deg,#be123c,#e11d48)","गलत भएका प्रश्न मात्र",NUM(wrongN)+" प्रश्न","startWrong()")}
+  ${mode("📖","linear-gradient(135deg,#7c3aed,#db2777)","प्रश्न र उत्तर पढ्नुहोस्","साल छानेर उत्तर र समाधानसहित","render('guide')")}
+  ${mode("★","linear-gradient(135deg,#f59e0b,#eab308)","Bookmark प्रश्न",NUM(bmN)+" प्रश्न","render('bookmarks')")}
+  ${mode("📈","linear-gradient(135deg,#2563eb,#4f46e5)","मेरो इतिहास र प्रगति","पुराना अंक र तुलना","render('progress')")}
+  ${mode("💾","linear-gradient(135deg,#475569,#64748b)","डाटा ब्याकअप","अंक सुरक्षित राख्नुहोस्","render('data')")}
  </div>
- <footer>प्रश्नहरू सम्भावित अभ्यासका लागि हुन् — वास्तविक परीक्षामा यही प्रश्न आउने ग्यारेन्टी होइन।<br>तपाईंको अंक, इतिहास र Bookmark यही फोन/ब्राउजरमा मात्र सुरक्षित हुन्छन्।</footer>
+ <footer>परीक्षा नियम: ५० प्रश्न × २ अंक, १ घण्टा, गलत उत्तरमा ०.४ अंक कट्टा, उत्तीर्णाङ्क ५०। <a href="#" onclick="render('rules');return false">विवरण</a><br>उत्तरहरू विज्ञ विश्लेषणमा आधारित छन्; आयोगको आधिकारिक उत्तरकुञ्जी होइनन्। ⚠ चिन्ह भएका प्रश्नको उत्तर किताबसँग पनि मिलाउनुहोस्।</footer>
  </div>`;
 };
 const IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
@@ -302,13 +303,11 @@ function abandon(){askYes("अधुरो परीक्षा रद्द �
 function withGuard(fn){if(!S.current){fn();return}askYes("एउटा अधुरो परीक्षा बाँकी छ। त्यसलाई रद्द गरेर नयाँ सुरु गर्ने?",()=>{S.current=null;save();fn()})}
 function openSet(k){
  const s=setDefs().find(x=>x.key===k);
- if(s.kind==="model"){withGuard(()=>{const ids=DB.filter(q=>q.set===k).map(q=>q.id);startExam({title:"SET "+NUM(s.no)+" — "+s.title,ids,full:true,minutes:RULE.minutes,kind:"model"})});return}
- if(!s.avail){modal(`<h3 style="margin-top:0">${s.title} — प्रश्नपत्र उपलब्ध छैन</h3><p>यस सालको वास्तविक प्रश्नपत्र, चारवटै विकल्प र सही उत्तर दुई विश्वसनीय स्रोतबाट प्रमाणित गर्न नसकिएकाले यहाँ राखिएको छैन।</p><p class="note">आयोगको वेबसाइट (tsc.gov.np), शिक्षक वा कोचिङबाट प्रमाणित प्रश्नपत्र पाएपछि “डाटा र प्रश्न थप” मा गएर यस सालमा थप्न सकिन्छ।</p><div class="row"><button class="btn pri" onclick="closeModal();render('data')">प्रश्न थप्नुहोस्</button><button class="btn" onclick="closeModal()">ठीक छ</button></div>`);return}
- withGuard(()=>{const ids=yearQs(s.year).map(q=>q.id);
- startExam({title:"SET "+NUM(s.no)+" — "+s.title+(ids.length<RULE.total?" (अपूर्ण)":""),ids,full:ids.length===RULE.total,kind:"year"})});
+ if(s.kind==="model"){withGuard(()=>{const ids=(k==="A"||k==="B")?DB.filter(q=>q.set===k).map(q=>q.id):paperQs(k).map(q=>q.id);startExam({title:"२०८३ "+s.lv,ids,full:true,minutes:RULE.minutes,kind:"model"})});return}
+ withGuard(()=>{const ids=paperQs(k).map(q=>q.id);startExam({title:s.full.year+" — "+s.full.lv+" ("+s.full.sub+")",ids,full:ids.length===RULE.total,minutes:RULE.minutes*ids.length/RULE.total,kind:"year"})});
 }
 function startQuick(){withGuard(()=>{startExam({title:"Special Quick Test (१२ प्रश्न)",ids:quickIds(),minutes:15,kind:"quick"})})}
-function startRandom(){withGuard(()=>{const ids=shuffle(allQ().map(q=>q.id)).slice(0,RULE.total);startExam({title:"Random Exam — सबै मिसाएर",ids,full:ids.length===RULE.total,minutes:RULE.minutes,kind:"random"})})}
+function startRandom(){withGuard(()=>{const ids=shuffle(DB.filter(q=>q.paper&&!PAPERS.find(p=>p.key===q.paper).guess).map(q=>q.id)).slice(0,RULE.total);startExam({title:"सबै साल मिसाएर (वास्तविक प्रश्न)",ids,full:ids.length===RULE.total,minutes:RULE.minutes,kind:"random"})})}
 function startPri(){withGuard(()=>{const ids=shuffle(allQ().filter(q=>q.p==="H").map(q=>q.id));startExam({title:"उच्च प्राथमिकताका प्रश्न",ids,kind:"practice"})})}
 function startRepeat(){const r=(S.imported||[]).filter(q=>(q.repeat||0)>=2);
  if(!r.length){modal(`<h3 style="margin-top:0">बारम्बार दोहोरिएका प्रश्न</h3><p>यो मोड वास्तविक पुराना प्रश्नपत्रमा आधारित हुन्छ। अहिले प्रमाणित पुराना प्रश्न नभएकाले कुन प्रश्न दोहोरिएको हो भनेर देखाउन मिल्दैन — अनुमान गरेर देखाइएको छैन।</p><p class="note">पुराना प्रश्न थपेपछि एउटै प्रश्न दुई वा बढी सालमा आएको भए (\"repeat\": २ वा बढी) यहाँ आउँछ।</p><button class="btn pri" onclick="closeModal()">ठीक छ</button>`);return}
@@ -326,7 +325,7 @@ V.exam=()=>{
  <div class="wrap">
  <div class="qcard" key="${q.id}">
   <div class="qmeta"><span>प्रश्न <b>${NUM(c.idx+1)}</b> / ${NUM(n)} • ${TOPICS[q.t]||""}</span><span>अंक: ${NUM(RULE.mark)} <button class="bm" onclick="toggleBm('${q.id}')" aria-label="Bookmark">${S.bm[q.id]?"★":"☆"}</button></span></div>
-  <div class="qtext">${esc(q.q)}</div>
+  <div class="qtext">${esc(q.q).replace(/\n/g,"<br>")}</div>${q.fig?`<img class="fig" src="${q.fig}" alt="प्रश्नको चित्र">`:""}
   ${q.o.map((o,i)=>`<button class="opt ${a===i?'on':''}" onclick="pick(${i})"><span class="rd"></span><span><span class="lt">${LET[i]}.</span> ${esc(o)}</span></button>`).join("")}
   <div class="navbtns">
    <button class="btn ghost" onclick="go(-1)" ${c.idx===0?"disabled":""}>← अघिल्लो प्रश्न</button>
@@ -411,23 +410,24 @@ V.review=()=>{
 function reviewCard(q,it,n){
  const lab={ok:"✓ सही",bad:"✗ गलत",skip:"उत्तर दिइएन"}[it.st];
  return `<div class="rv ${it.st}"><div class="row" style="justify-content:space-between"><span class="tag">${lab}</span><span class="note">प्रश्न ${NUM(n)} • ${TOPICS[q.t]} • ${it.m>0?"+":""}${fmt(it.m)} अंक <button class="bm" onclick="toggleBm('${q.id}')">${S.bm[q.id]?"★":"☆"}</button></span></div>
- <div class="qtext" style="font-size:1.08rem;margin-top:8px">${esc(q.q)}</div>
+ <div class="qtext" style="font-size:1.08rem;margin-top:8px">${esc(q.q).replace(/\n/g,"<br>")}</div>${q.fig?`<img class="fig" src="${q.fig}" alt="">`:""}
  ${q.o.map((o,i)=>`<div class="ro ${i===q.a?'right':''} ${i===it.a&&i!==q.a?'mine':''}">${LET[i]}. ${esc(o)} ${i===q.a?" ✓":""}${i===it.a&&i!==q.a?" ✗ (तपाईंको उत्तर)":""}${i===it.a&&i===q.a?" (तपाईंको उत्तर)":""}</div>`).join("")}
  <div class="note" style="margin-top:6px">तपाईंको उत्तर: <b>${it.a===null?"दिइएन":LET[it.a]+". "+esc(q.o[it.a])}</b> • सही उत्तर: <b>${LET[q.a]}. ${esc(q.o[q.a])}</b></div>
  ${expl(q)}</div>`;
 }
-function expl(q){return `<div class="exp"><h4>✅ सही उत्तर किन सही?</h4><p>${esc(q.why)}</p><h4>❌ अन्य विकल्प किन गलत?</h4><p>${esc(q.wrong)}</p>${q.tip?`<h4>💡 सम्झने सजिलो तरिका</h4><p>${esc(q.tip)}</p>`:""}
- <h4>📌 स्रोत</h4><p class="note">${q.year?esc(q.year)+" साल • ":(q.set?"२०८३ सम्भावित Model Set "+q.set+" (अभ्यास प्रश्न) • ":"")}${esc(q.src||"")} <span class="pill pri-${q.p||'M'}">${PRI[q.p||'M']}</span></p></div>`}
+function expl(q){const P=q.paper?PAPERS.find(p=>p.key===q.paper):null;
+ return `<div class="exp">${q.conf==="low"?`<p style="color:var(--skip)"><b>⚠ यो उत्तरमा पूर्ण निश्चित छैन — शिक्षक वा किताबसँग मिलाउनुहोस्।</b></p>`:""}<h4>✅ सही उत्तर किन सही?</h4><p>${esc(q.why)}</p>${q.wrong?`<h4>❌ अन्य विकल्प किन गलत?</h4><p>${esc(q.wrong)}</p>`:""}${q.tip?`<h4>💡 सम्झने सजिलो तरिका</h4><p>${esc(q.tip)}</p>`:""}
+ <h4>📌 स्रोत</h4><p class="note">${P?`${P.guess?"अनुमानित प्रश्न":"वास्तविक प्रश्न"}: ${esc(P.year)} • ${esc(P.lv)} • ${esc(P.sub)} • प्रश्न नं. ${NUM(q.n)} • स्रोत: ${esc(P.src)} • उत्तर आधिकारिक कुञ्जी होइन`:(q.year?esc(q.year)+" साल • "+esc(q.src||""):(q.set?"२०८३ अनुमानित सेट "+q.set+" (अभ्यास प्रश्न) • "+esc(q.src||""):esc(q.src||"")))}</p></div>`}
 
 V.topics=()=>topbar("विषयअनुसार परीक्षा")+`<div class="wrap"><h2 class="sec">विषय छान्नुहोस्</h2><div class="modes">
  ${Object.keys(TOPICS).map(t=>{const n=allQ().filter(q=>q.t===t).length;return n?mode("●",TCOL[t],TOPICS[t],NUM(n)+" प्रश्न",`startTopic('${t}')`):""}).join("")}</div>
  <div class="infobox">समसामयिक विषयका प्रश्न अनलाइन स्रोतबाट ताजा रूपमा प्रमाणित गर्न नसकिएकाले राखिएका छैनन् — परीक्षाअघि पत्रपत्रिका र आयोगको सूचना पढ्नुहोस्।</div></div>`;
 
-V.guide=()=>{const g=view.guideSet; const qs=allQ().filter(q=>g==="all"?true:(g.startsWith("T:")?q.t===g.slice(2):q.set===g));
- return topbar("Study Guide")+`<div class="wrap"><div class="tabs" style="margin-top:14px">
- ${[["A","Model Set A"],["B","Model Set B"],["all","सबै"]].concat(Object.keys(TOPICS).filter(t=>allQ().some(q=>q.t===t)).map(t=>["T:"+t,TOPICS[t]])).map(([k,l])=>`<button class="${g===k?'on':''}" onclick="view.guideSet='${k}';render('guide')">${l}</button>`).join("")}</div>
- ${qs.map((q,i)=>`<div class="rv"><div class="row" style="justify-content:space-between"><span class="note">${NUM(i+1)}. ${TOPICS[q.t]}</span><button class="bm" onclick="toggleBm('${q.id}')">${S.bm[q.id]?"★":"☆"}</button></div>
- <div class="qtext" style="font-size:1.05rem">${esc(q.q)}</div>${q.o.map((o,j)=>`<div class="ro ${j===q.a?'right':''}">${LET[j]}. ${esc(o)}${j===q.a?" ✓":""}</div>`).join("")}${expl(q)}</div>`).join("")}</div>`};
+V.guide=()=>{const g=view.guideSet; const qs=g==="A"||g==="B"?DB.filter(q=>q.set===g):paperQs(g);
+ return topbar("प्रश्न र उत्तर")+`<div class="wrap"><div class="tabs" style="margin-top:14px">
+ ${PAPERS.map(p=>[p.key,p.year+" "+p.short]).concat([["A","अनुमानित A"],["B","अनुमानित B"]]).map(([k,l])=>`<button class="${g===k?'on':''}" onclick="view.guideSet='${k}';render('guide')">${l}</button>`).join("")}</div>
+ ${qs.map((q,i)=>`<div class="rv"><div class="row" style="justify-content:space-between"><span class="note">${NUM(q.n||i+1)}. ${TOPICS[q.t]||""}</span><button class="bm" onclick="toggleBm('${q.id}')">${S.bm[q.id]?"★":"☆"}</button></div>
+ <div class="qtext" style="font-size:1.05rem">${esc(q.q).replace(/\n/g,"<br>")}</div>${q.fig?`<img class="fig" src="${q.fig}" alt="">`:""}${q.o.map((o,j)=>`<div class="ro ${j===q.a?'right':''}">${LET[j]}. ${esc(o)}${j===q.a?" ✓":""}</div>`).join("")}${expl(q)}</div>`).join("")}</div>`};
 
 V.bookmarks=()=>{const ids=Object.keys(S.bm).filter(byId);return topbar("Bookmark प्रश्न")+`<div class="wrap"><div class="row" style="margin-top:14px"><button class="btn pri" onclick="startBm()" ${ids.length?"":"disabled"}>यी प्रश्नको परीक्षा दिनुहोस्</button></div>
  ${ids.map((id,i)=>{const q=byId(id);return `<div class="rv"><div class="row" style="justify-content:space-between"><span class="note">${NUM(i+1)}. ${TOPICS[q.t]}</span><button class="bm" onclick="toggleBm('${q.id}')">★</button></div><div class="qtext" style="font-size:1.05rem">${esc(q.q)}</div>${q.o.map((o,j)=>`<div class="ro ${j===q.a?'right':''}">${LET[j]}. ${esc(o)}</div>`).join("")}${expl(q)}</div>`}).join("")||'<p class="note">परीक्षा वा Study Guide मा ☆ थिचेर प्रश्न Bookmark गर्नुहोस्।</p>'}</div>`};

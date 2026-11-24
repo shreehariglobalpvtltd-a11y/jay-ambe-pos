@@ -3,10 +3,14 @@ R = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(R); D = o
 os.makedirs(D, exist_ok=True)
 b64 = lambda f: base64.b64encode(open(os.path.join(ROOT, "fonts", f), "rb").read()).decode()
 db = json.load(open(os.path.join(R, "questions.json")))
+import sys; sys.path.insert(0, R)
+from papers import load as load_papers
+PAP, REAL = load_papers()
+db = REAL + db
 tpl = open(os.path.join(R, "app.html")).read()
 tpl = (tpl.replace("__F400__", b64("mukta-400.woff2")).replace("__F700__", b64("mukta-700.woff2"))
           .replace("__F400L__", b64("mukta-400-latin.woff2")).replace("__F700L__", b64("mukta-700-latin.woff2"))
-          .replace("__DB__", json.dumps(db, ensure_ascii=False))
+          .replace("__DB__", json.dumps(db, ensure_ascii=False)).replace("__PAPERS__", json.dumps(PAP, ensure_ascii=False))
           .replace("__ICON180__", base64.b64encode(open(os.path.join(R, "icon-180.png"), "rb").read()).decode()))
 pwa_head = '<link rel="manifest" href="manifest.webmanifest">\n<link rel="icon" href="icon-192.png">\n<link rel="apple-touch-icon" href="icon-192.png">'
 pwa_sw = "if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){navigator.serviceWorker.register('sw.js').catch(function(){})}"
