@@ -143,6 +143,20 @@ select{font:inherit;padding:8px 10px;border-radius:12px;border:1px solid var(--l
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:60}
 .pri-H{color:#fff;background:#dc2626}.pri-M{color:#fff;background:#f59e0b}.pri-L{color:#fff;background:#64748b}
 .fig{display:block;max-width:100%;border-radius:12px;border:1px solid var(--line);margin:6px 0 10px;background:#fff}
+.plist{display:flex;flex-direction:column;gap:8px}
+.prow{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:10px 12px;box-shadow:var(--shadow)}
+.prow.imp{background:linear-gradient(135deg,#fff7ed,#fef3c7);border-color:#fcd34d;color:#1e1b4b}
+.prow.imp .pinfo span{color:#7c5a10}
+.pyr{font-weight:700;font-size:1.15rem;min-width:58px;color:var(--purple);text-align:center}
+.prow.imp .pyr{color:#c2410c}
+.pinfo{flex:1;min-width:0;line-height:1.35}.pinfo b{display:block}.pinfo span{font-size:.8rem;color:var(--muted)}.pinfo em{color:var(--ok);font-style:normal;font-weight:700}
+.mine{font-size:.68rem;background:var(--ok);color:#fff;border-radius:99px;padding:1px 7px;vertical-align:2px}
+.pbtn{display:flex;flex-direction:column;gap:6px}
+.btn.sm{padding:6px 12px;font-size:.92rem;line-height:1.15;min-width:84px}.btn small{display:block;font-size:.68rem;font-weight:400;opacity:.9}
+@media(max-width:420px){.prow{flex-wrap:wrap}.pbtn{flex-direction:row;width:100%}.pbtn .btn{flex:1}}
+.opt.ok{border-color:var(--ok);background:var(--okbg);font-weight:700}.opt.bad{border-color:var(--bad);background:var(--badbg)}.opt:disabled{opacity:1;cursor:default}
+.fbk{margin-top:10px;padding:10px 14px;border-radius:14px;font-weight:700;font-size:1.05rem;animation:slide .25s}.fbk.ok{background:var(--okbg);color:var(--ok)}.fbk.bad{background:var(--badbg);color:var(--bad)}
+.howto{font-size:.85rem;margin-top:8px!important;background:rgba(255,255,255,.15);padding:8px 10px;border-radius:12px}
 .pill{font-size:.72rem;padding:1px 8px;border-radius:99px;font-weight:700}
 footer{text-align:center;font-size:.78rem;color:var(--muted);margin-top:30px}
 @media print{header.top,.noprint{display:none!important}.rv{break-inside:avoid}}
@@ -197,7 +211,17 @@ function setDefs(){
  ps.push({key:"B",kind:"model",title:"२०८३ साल",lv:"अनुमानित सेट B",sub:"यस एपको अनुमानित सेट",n:50,avail:true});
  return ps;
 }
-function paperQs(k){return DB.filter(q=>q.paper===k).sort((a,b)=>a.n-b.n)}
+function paperQs(k){if(k==="A"||k==="B")return DB.filter(q=>q.set===k);const P=PAPERS.find(p=>p.key===k);if(P&&P.imp)return P.imp.map(byId).filter(Boolean);return DB.filter(q=>q.paper===k).sort((a,b)=>a.n-b.n)}
+/* ---------- आवाज (Sound): सही = माथि जाने दुई सुर, गलत = तल्लो सुर ---------- */
+let AC=null;
+function tone(ok){if(S.sound===false)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume();
+ const seq=ok?[[660,0],[880,.12]]:[[220,0],[180,.15]];
+ seq.forEach(([f,t])=>{const o=AC.createOscillator(),g=AC.createGain();o.type=ok?"sine":"square";o.frequency.value=f;g.gain.setValueAtTime(.0001,AC.currentTime+t);g.gain.exponentialRampToValueAtTime(ok?.25:.12,AC.currentTime+t+.02);g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+t+.22);o.connect(g);g.connect(AC.destination);o.start(AC.currentTime+t);o.stop(AC.currentTime+t+.25)})}catch(e){}
+ try{if(navigator.vibrate&&!ok)navigator.vibrate(120)}catch(e){}}
+function toggleSound(){S.sound=S.sound===false?true:false;save();if(S.sound)tone(true);render()}
+function startPaper(k,mode){const P=PAPERS.find(p=>p.key===k);const ids=paperQs(k).map(q=>q.id);
+ const name=k==="A"||k==="B"?"२०८३ अनुमानित सेट "+k:(P.imp?P.lv:P.year+" — "+P.lv+" ("+P.sub+")");
+ withGuard(()=>startExam({key:k,title:name,ids,full:mode==="exam"&&ids.length===RULE.total,minutes:RULE.minutes*ids.length/RULE.total,kind:mode,practice:mode==="practice"}))}
 function quickIds(){
  const pick=s=>DB.filter(q=>q.set===s&&q.p==="H");
  const take=(arr)=>{const seen={},out=[];for(const q of arr){if(!seen[q.t]&&out.length<6){seen[q.t]=1;out.push(q)}}for(const q of arr){if(out.length<6&&!out.includes(q))out.push(q)}return out};
@@ -208,7 +232,7 @@ function quickIds(){
 function startExam(o){
  // o: {title, ids, full:boolean, minutes, kind}
  if(!o.ids.length){toast("यस मोडमा अहिले कुनै प्रश्न छैन।");return}
- S.current={title:o.title,ids:o.ids,ans:{},mark:{},idx:0,full:!!o.full&&o.ids.length===RULE.total,kind:o.kind||"practice",
+ S.current={key:o.key,title:o.title,ids:o.ids,ans:{},mark:{},idx:0,full:!!o.full&&o.ids.length===RULE.total,kind:o.kind||"practice",practice:!!o.practice,
   dur:Math.round((o.minutes|| (o.ids.length*RULE.minutes/RULE.total))*60),started:Date.now(),elapsed:0};
  save(); render("exam");
 }
@@ -220,7 +244,7 @@ function startTimer(){
  if(tick) return; lastT=Date.now();
  tick=setInterval(()=>{const c=S.current;if(!c){stopTimer();return}
   const now=Date.now();c.elapsed+=(now-lastT)/1000;lastT=now;
-  const r=remaining(); const el=$("#tm"); if(el){el.textContent=clock(r);el.classList.toggle("low",r<=120)}
+  const r=remaining(); const el=$("#tm"); if(c.practice)return; if(el){el.textContent=clock(r);el.classList.toggle("low",r<=120)}
   if(++saveCt%5===0)save();
   if(r<=0){stopTimer();toast("समय सकियो — परीक्षा स्वतः बुझाइयो।");finish()}
  },500);
@@ -240,7 +264,7 @@ function finish(){
  });
  const full=c.ids.length*RULE.mark; const neg=wrong*RULE.neg;
  const score=right*RULE.mark-neg;
- const res={id:Date.now(),title:c.title,kind:c.kind,full:c.full,n:c.ids.length,right,wrong,skip,fullMarks:full,
+ const res={id:Date.now(),key:c.key,title:c.title,kind:c.kind,full:c.full,n:c.ids.length,right,wrong,skip,fullMarks:full,
   neg,score,pct:full?Math.max(0,score)/full*100:0,secs:Math.round(Math.min(c.elapsed,c.dur)),date:new Date().toISOString(),tstat,items,
   pass:c.full?score>=RULE.pass:null};
  S.history.unshift(res); S.history=S.history.slice(0,60); S.current=null; save();
@@ -254,41 +278,44 @@ function render(name){ if(name)view.name=name; window.scrollTo(0,0); const f=V[v
 function topbar(title,back=true){
  return `<header class="top"><div class="in">${back?`<button class="iconbtn" onclick="render('home')" aria-label="गृहपृष्ठ">⌂</button>`:""}
  <div class="brand">${title}<small>${STUDENT.np} • TSC निम्नमाध्यमिक तृतीय श्रेणी</small></div>
- <button class="iconbtn" onclick="toggleTheme()" aria-label="Dark/Light mode">◐</button></div></header>`;
+ <button class="iconbtn" onclick="toggleSound()" aria-label="Sound">${S.sound===false?"🔇":"🔊"}</button><button class="iconbtn" onclick="toggleTheme()" aria-label="Dark/Light mode">◐</button></div></header>`;
 }
 function toggleTheme(){const cur=document.documentElement.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");
  const n=cur==="dark"?"light":"dark";document.documentElement.dataset.theme=n;S.theme=n;save()}
 
 const V={};
 V.home=()=>{
- const sets=setDefs(); const c=S.current; const last=S.history[0];
+ const c=S.current; const last=S.history[0];
  const wrongN=Object.keys(S.wrong).filter(byId).length, bmN=Object.keys(S.bm).filter(byId).length;
- const realN=DB.filter(q=>q.paper&&!PAPERS.find(p=>p.key===q.paper).guess).length;
- const card=s=>`<button class="setcard ${s.kind==='model'?'model':''}" onclick="openSet('${s.key}')">
-  <span class="badge ${s.kind==='model'?'gold':(s.mine?'green':'')}">${s.kind==='model'?'अनुमानित':(s.mine?'मेरो तह':'वास्तविक')}</span>
-  <div class="yr">${s.title}</div><div class="st"><b>${s.lv||""}</b>${s.lv?"<br>":""}${s.sub}${s.n?" • "+NUM(s.n)+" प्रश्न":""}</div></button>`;
- return topbar("TSC परीक्षा अभ्यास",false)+`<div class="wrap">
- <div class="hero"><h1>नमस्ते, संगीता सुनार! 🌸</h1><p>तपाईंको सफलताको यात्रा आजैबाट सुरु हुन्छ।</p></div>
+ const best=k=>{const h=S.history.filter(x=>x.key===k);return h.length?Math.max(...h.map(x=>x.pct)):null};
+ const row=(k,yr,l1,l2,n,cls)=>{const b=best(k);return `<div class="prow ${cls||""}"><div class="pyr">${yr}</div><div class="pinfo"><b>${l1}</b><span>${l2} • ${NUM(n)} प्रश्न${b!==null?` • <em>उत्कृष्ट ${fmt(b,0)}%</em>`:""}</span></div>
+  <div class="pbtn"><button class="btn pri sm" onclick="startPaper('${k}','exam')">परीक्षा<small>Exam</small></button><button class="btn org sm" onclick="startPaper('${k}','practice')">अभ्यास<small>Practice 🔊</small></button></div></div>`};
+ const imp=PAPERS.filter(p=>p.imp), old=PAPERS.filter(p=>!p.guess), gs=PAPERS.filter(p=>p.guess&&!p.imp);
+ return topbar("संगीताको TSC परीक्षा",false)+`<div class="wrap">
+ <div class="hero"><h1>नमस्ते, संगीता सुनार! 🌸</h1><p>तपाईंको सफलताको यात्रा आजैबाट सुरु हुन्छ।</p>
+ <p class="howto"><b>परीक्षा (Exam)</b> = वास्तविक परीक्षा जस्तै, अन्त्यमा मात्र नतिजा। <b>अभ्यास (Practice)</b> = हरेक प्रश्नमा तुरुन्त सही/गलत र आवाज।</p></div>
  ${installCard()}${backupCard()}
- ${c?`<div class="card" style="border-color:var(--orange)"><b>⏸ अधुरो परीक्षा: ${esc(c.title)}</b><div class="note">${NUM(Object.keys(c.ans).length)}/${NUM(c.ids.length)} उत्तर दिइएको • बाँकी समय ${clock(remaining())}</div>
-  <div class="row" style="margin-top:8px"><button class="btn org" onclick="render('exam')">पुनः सुरु गर्नुहोस्</button><button class="btn ghost" onclick="abandon()">रद्द गर्नुहोस्</button></div></div>`:""}
- ${last?`<div class="card" style="margin-top:12px"><div class="row" style="justify-content:space-between"><div><b>अन्तिम परीक्षा:</b> ${esc(last.title)}<div class="note">${fmt(last.score)}/${NUM(last.fullMarks)} अंक • ${fmt(last.pct,1)}%</div></div><button class="btn" onclick="view.result=${last.id};render('result')">नतिजा हेर्नुहोस्</button></div></div>`:""}
- <h2 class="sec">पुराना वास्तविक प्रश्नपत्र — साल छान्नुहोस्</h2>
- <div class="grid">${sets.filter(s=>s.kind==="paper").map(card).join("")}</div>
- <p class="note">२०७३–२०७७ र २०७९ सालका वस्तुगत प्रश्नपत्र भेटिएनन्। ती सालमा खुला सामान्य परीक्षा नै नभएको पनि हुन सक्छ।</p>
- <h2 class="sec">२०८३ का लागि अनुमानित प्रश्न</h2>
- <div class="grid">${sets.filter(s=>s.kind==="model").map(card).join("")}
-  <button class="setcard model" onclick="startQuick()"><span class="badge gold">छिटो</span><div class="yr">Quick Test</div><div class="st">१२ प्रश्न • १५ मिनेट</div></button></div>
- <h2 class="sec">अभ्यास</h2>
+ ${c?`<div class="card" style="border-color:var(--orange)"><b>⏸ अधुरो परीक्षा (Resume): ${esc(c.title)}</b><div class="note">${NUM(Object.keys(c.ans).length)}/${NUM(c.ids.length)} उत्तर दिइएको</div>
+  <div class="row" style="margin-top:8px"><button class="btn org" onclick="render('exam')">जारी राख्नुहोस् · Continue</button><button class="btn ghost" onclick="abandon()">रद्द · Cancel</button></div></div>`:""}
+ ${last?`<div class="card" style="margin-top:12px"><div class="row" style="justify-content:space-between"><div><b>अन्तिम नतिजा (Last result):</b> ${esc(last.title)}<div class="note">${fmt(last.score)}/${NUM(last.fullMarks)} अंक • ${fmt(last.pct,1)}%</div></div><button class="btn" onclick="view.result=${last.id};render('result')">हेर्नुहोस् · View</button></div></div>`:""}
+ <h2 class="sec">⭐ Important सेट — सुरुमा यही गर्नुहोस्</h2>
+ <p class="note" style="margin-top:-4px">पुराना निम्नमाध्यमिक प्रश्न र अनुमानित सेटबाट पाठ्यक्रमको भारअनुसार छानिएका सम्भावित महत्त्वपूर्ण प्रश्न।</p>
+ <div class="plist">${imp.map(p=>row(p.key,"⭐",p.lv,"सम्भावित (Probable)",p.imp.length,"imp")).join("")}</div>
+ <h2 class="sec">पुराना प्रश्नपत्र · Old Papers (साल अनुसार)</h2>
+ <div class="plist">${old.map(p=>row(p.key,p.year,p.lv+(p.mine?' <span class="mine">मेरो तह</span>':""),p.sub,paperQs(p.key).length)).join("")}</div>
+ <h2 class="sec">२०८३ अनुमानित सेट · Model Sets</h2>
+ <div class="plist">${row("A","२०८३","अनुमानित सेट A","Model Set A",50,"imp")}${row("B","२०८३","अनुमानित सेट B","Model Set B",50,"imp")}${gs.map(p=>row(p.key,p.year,p.lv,p.sub,paperQs(p.key).length,"imp")).join("")}
+  <div class="prow imp"><div class="pyr">⚡</div><div class="pinfo"><b>Quick Test</b><span>१२ प्रश्न • १५ मिनेट</span></div><div class="pbtn"><button class="btn pri sm" onclick="startQuick()">परीक्षा<small>Exam</small></button></div></div></div>
+ <h2 class="sec">थप · More</h2>
  <div class="modes">
-  ${mode("🎲","linear-gradient(135deg,#4f46e5,#7c3aed)","सबै साल मिसाएर परीक्षा",NUM(realN)+" वास्तविक प्रश्नबाट ५० प्रश्न","startRandom()")}
-  ${mode("✗","linear-gradient(135deg,#be123c,#e11d48)","गलत भएका प्रश्न मात्र",NUM(wrongN)+" प्रश्न","startWrong()")}
-  ${mode("📖","linear-gradient(135deg,#7c3aed,#db2777)","प्रश्न र उत्तर पढ्नुहोस्","साल छानेर उत्तर र समाधानसहित","render('guide')")}
-  ${mode("★","linear-gradient(135deg,#f59e0b,#eab308)","Bookmark प्रश्न",NUM(bmN)+" प्रश्न","render('bookmarks')")}
-  ${mode("📈","linear-gradient(135deg,#2563eb,#4f46e5)","मेरो इतिहास र प्रगति","पुराना अंक र तुलना","render('progress')")}
-  ${mode("💾","linear-gradient(135deg,#475569,#64748b)","डाटा ब्याकअप","अंक सुरक्षित राख्नुहोस्","render('data')")}
+  ${mode("🎲","linear-gradient(135deg,#4f46e5,#7c3aed)","सबै मिसाएर · Mixed","सबै पुराना प्रश्नबाट ५० प्रश्न","startRandom()")}
+  ${mode("✗","linear-gradient(135deg,#be123c,#e11d48)","गलत प्रश्न · Wrong ones",NUM(wrongN)+" प्रश्न फेरि अभ्यास","startWrong()")}
+  ${mode("📖","linear-gradient(135deg,#7c3aed,#db2777)","प्रश्न-उत्तर पढ्नुहोस् · Read","उत्तर र समाधानसहित","render('guide')")}
+  ${mode("★","linear-gradient(135deg,#f59e0b,#eab308)","Bookmark",NUM(bmN)+" प्रश्न","render('bookmarks')")}
+  ${mode("📈","linear-gradient(135deg,#2563eb,#4f46e5)","मेरो प्रगति · Progress","पुराना अंक र तुलना","render('progress')")}
+  ${mode("💾","linear-gradient(135deg,#475569,#64748b)","ब्याकअप · Backup","अंक सुरक्षित राख्नुहोस्","render('data')")}
  </div>
- <footer>परीक्षा नियम: ५० प्रश्न × २ अंक, १ घण्टा, गलत उत्तरमा ०.४ अंक कट्टा, उत्तीर्णाङ्क ५०। <a href="#" onclick="render('rules');return false">विवरण</a><br>उत्तरहरू विज्ञ विश्लेषणमा आधारित छन्; आयोगको आधिकारिक उत्तरकुञ्जी होइनन्। ⚠ चिन्ह भएका प्रश्नको उत्तर किताबसँग पनि मिलाउनुहोस्।</footer>
+ <footer>नियम (Rules): ५० प्रश्न × २ अंक, १ घण्टा, गलत उत्तरमा ०.४ अंक कट्टा, उत्तीर्णाङ्क ५०। <a href="#" onclick="render('rules');return false">विवरण</a><br>उत्तरहरू आयोगको आधिकारिक कुञ्जी होइनन्। ⚠ चिन्ह भएका प्रश्नको उत्तर किताबसँग पनि मिलाउनुहोस्।</footer>
  </div>`;
 };
 const IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
@@ -320,29 +347,31 @@ V.exam=()=>{
  const c=S.current; if(!c) return V.home();
  const q=byId(c.ids[c.idx]); const n=c.ids.length; const done=Object.keys(c.ans).length;
  const a=c.ans[q.id];
- return `<div class="exbar"><div class="in"><div class="l1"><div><b>👩‍🏫 ${STUDENT.np}</b><div style="opacity:.85;font-size:.8rem">${esc(c.title)}</div></div><div id="tm" class="timer">${clock(remaining())}</div></div>
+ return `<div class="exbar"><div class="in"><div class="l1"><div><b>👩‍🏫 ${STUDENT.np}</b><div style="opacity:.85;font-size:.8rem">${esc(c.title)}</div></div><div id="tm" class="timer">${c.practice?"अभ्यास":clock(remaining())}</div></div>
  <div class="prog"><i style="width:${done/n*100}%"></i></div><div style="font-size:.78rem;opacity:.9;margin-top:4px">${NUM(done)}/${NUM(n)} उत्तर दिइयो</div></div></div>
  <div class="wrap">
  <div class="qcard" key="${q.id}">
   <div class="qmeta"><span>प्रश्न <b>${NUM(c.idx+1)}</b> / ${NUM(n)} • ${TOPICS[q.t]||""}</span><span>अंक: ${NUM(RULE.mark)} <button class="bm" onclick="toggleBm('${q.id}')" aria-label="Bookmark">${S.bm[q.id]?"★":"☆"}</button></span></div>
   <div class="qtext">${esc(q.q).replace(/\n/g,"<br>")}</div>${q.fig?`<img class="fig" src="${q.fig}" alt="प्रश्नको चित्र">`:""}
-  ${q.o.map((o,i)=>`<button class="opt ${a===i?'on':''}" onclick="pick(${i})"><span class="rd"></span><span><span class="lt">${LET[i]}.</span> ${esc(o)}</span></button>`).join("")}
+  ${q.o.map((o,i)=>{const fb=c.practice&&a!==undefined;const cl=fb?(i===q.a?"ok":(i===a?"bad":"")):(a===i?"on":"");
+    return `<button class="opt ${cl}" onclick="pick(${i})" ${fb?"disabled":""}><span class="rd"></span><span><span class="lt">${LET[i]}.</span> ${esc(o)}${fb&&i===q.a?" ✓":""}${fb&&i===a&&i!==q.a?" ✗":""}</span></button>`}).join("")}
+  ${c.practice&&a!==undefined?`<div class="fbk ${a===q.a?"ok":"bad"}">${a===q.a?"🎉 सही! Correct":"✗ गलत · Wrong — सही उत्तर: "+LET[q.a]+". "+esc(q.o[q.a])}</div>${expl(q)}`:""}
   <div class="navbtns">
-   <button class="btn ghost" onclick="go(-1)" ${c.idx===0?"disabled":""}>← अघिल्लो प्रश्न</button>
-   <button class="btn pri" onclick="go(1)" ${c.idx===n-1?"disabled":""}>अर्को प्रश्न →</button>
-   <button class="btn" onclick="skipQ()">प्रश्न छोड्नुहोस्</button>
-   <button class="btn ${c.mark[q.id]?'org':''}" onclick="markQ()">${c.mark[q.id]?"✓ समीक्षामा राखियो":"पछि समीक्षा गर्नुहोस्"}</button>
-   <button class="btn red full" onclick="askFinish()">परीक्षा समाप्त गर्नुहोस्</button>
+   <button class="btn ghost" onclick="go(-1)" ${c.idx===0?"disabled":""}>← अघिल्लो · Prev</button>
+   <button class="btn pri" onclick="go(1)" ${c.idx===n-1?"disabled":""}>अर्को · Next →</button>
+   ${c.practice?"":`<button class="btn" onclick="skipQ()">छोड्नुहोस् · Skip</button>
+   <button class="btn ${c.mark[q.id]?'org':''}" onclick="markQ()">${c.mark[q.id]?"✓ समीक्षामा":"पछि हेर्ने · Review"}</button>`}
+   <button class="btn red full" onclick="askFinish()">${c.practice?"अभ्यास सकियो · Finish":"परीक्षा समाप्त · Submit"}</button>
   </div>
  </div>
  <div class="card" style="margin-top:14px"><b style="font-size:.9rem">प्रश्न सूची</b>
   <div class="palette">${c.ids.map((id,i)=>`<button class="${c.ans[id]!==undefined?'a':''} ${c.mark[id]?'m':''} ${i===c.idx?'c':''}" onclick="jump(${i})">${NUM(i+1)}</button>`).join("")}</div>
   <div class="legend"><span><i style="background:var(--purple)"></i>उत्तर दिइएको</span><span><i style="background:var(--gold)"></i>पछि समीक्षा</span><span><i style="background:var(--line)"></i>बाँकी</span></div>
  </div>
- <p class="note" style="text-align:center">परीक्षाको बेला सही/गलत देखाइँदैन। गलत उत्तरमा ${fmt(RULE.neg)} अंक काटिन्छ; उत्तर नदिएमा अंक काटिँदैन।</p>
+ <p class="note" style="text-align:center">${c.practice?"अभ्यास मोड: उत्तर छान्नेबित्तिकै सही/गलत देखिन्छ।":"परीक्षा मोड: सही/गलत अन्त्यमा मात्र देखिन्छ।"} गलत उत्तरमा ${fmt(RULE.neg)} अंक काटिन्छ; उत्तर नदिएमा अंक काटिँदैन।</p>
  </div>`;
 };
-function pick(i){const c=S.current,id=c.ids[c.idx];c.ans[id]=i;save();render("exam")}
+function pick(i){const c=S.current,id=c.ids[c.idx];if(c.practice&&c.ans[id]!==undefined)return;c.ans[id]=i;save();if(c.practice){tone(i===byId(id).a)}else{tone(true)}render("exam");if(c.practice){const f=document.querySelector(".fbk");if(f)f.scrollIntoView({behavior:"smooth",block:"center"})}}
 function go(d){const c=S.current;c.idx=Math.max(0,Math.min(c.ids.length-1,c.idx+d));save();render("exam")}
 function jump(i){S.current.idx=i;save();render("exam")}
 function skipQ(){const c=S.current;delete c.ans[c.ids[c.idx]];if(c.idx<c.ids.length-1)c.idx++;save();render("exam")}
