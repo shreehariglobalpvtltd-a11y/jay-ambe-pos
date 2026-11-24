@@ -13,8 +13,7 @@ Q = {"gk":15,"ed":20,"ict":5,"law":5,"iq":5}
 mine = [p["key"] for p in PAP if p["mine"] and not p["guess"]]
 pool = [q for q in db if q.get("set") in ("A","B") and q.get("p") == "H"] + \
        [q for k in mine for q in REAL if q["paper"] == k and q.get("conf") == "high" and not q.get("fig")] + \
-       [q for q in db if q.get("set") in ("A","B") and q.get("p") == "M"] + \
-       [q for q in REAL if q["paper"] not in mine and q.get("conf") == "high" and not q.get("fig") and not next(p for p in PAP if p["key"]==q["paper"])["guess"]]
+       [q for q in db if q.get("set") in ("A","B") and q.get("p") == "M"]
 used = set(); IMP = []
 for i in range(3):
     ids = []
@@ -26,7 +25,9 @@ for i in range(3):
         if q["id"] not in used: used.add(q["id"]); ids.append(q["id"])
     IMP.append({"key": f"imp{i+1}", "year": "२०८३", "lv": f"Important सेट {i+1}", "sub": "सम्भावित महत्त्वपूर्ण प्रश्न", "short": f"Important {i+1}",
                 "mine": True, "guess": True, "imp": ids, "src": "पुराना निमावि प्रश्न र अनुमानित सेटबाट छानिएका", "url": ""})
-PAP = IMP + PAP
+PAP = IMP + [p for p in PAP if p["mine"] and not p["guess"]]
+keep = {p["key"] for p in PAP}; impids = {i for p in IMP for i in p["imp"]}
+db = [q for q in db if (q.get("paper") in keep) or q["id"] in impids]
 tpl = open(os.path.join(R, "app.html")).read()
 tpl = (tpl.replace("__F400__", b64("mukta-400.woff2")).replace("__F700__", b64("mukta-700.woff2"))
           .replace("__F400L__", b64("mukta-400-latin.woff2")).replace("__F700L__", b64("mukta-700-latin.woff2"))

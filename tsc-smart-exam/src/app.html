@@ -301,11 +301,8 @@ V.home=()=>{
  <h2 class="sec">⭐ Important सेट — सुरुमा यही गर्नुहोस्</h2>
  <p class="note" style="margin-top:-4px">पुराना निम्नमाध्यमिक प्रश्न र अनुमानित सेटबाट पाठ्यक्रमको भारअनुसार छानिएका सम्भावित महत्त्वपूर्ण प्रश्न।</p>
  <div class="plist">${imp.map(p=>row(p.key,"⭐",p.lv,"सम्भावित (Probable)",p.imp.length,"imp")).join("")}</div>
- <h2 class="sec">पुराना प्रश्नपत्र · Old Papers (साल अनुसार)</h2>
+ <h2 class="sec">पुराना निम्नमाध्यमिक प्रश्नपत्र · Old Papers</h2>
  <div class="plist">${old.map(p=>row(p.key,p.year,p.lv+(p.mine?' <span class="mine">मेरो तह</span>':""),p.sub,paperQs(p.key).length)).join("")}</div>
- <h2 class="sec">२०८३ अनुमानित सेट · Model Sets</h2>
- <div class="plist">${row("A","२०८३","अनुमानित सेट A","Model Set A",50,"imp")}${row("B","२०८३","अनुमानित सेट B","Model Set B",50,"imp")}${gs.map(p=>row(p.key,p.year,p.lv,p.sub,paperQs(p.key).length,"imp")).join("")}
-  <div class="prow imp"><div class="pyr">⚡</div><div class="pinfo"><b>Quick Test</b><span>१२ प्रश्न • १५ मिनेट</span></div><div class="pbtn"><button class="btn pri sm" onclick="startQuick()">परीक्षा<small>Exam</small></button></div></div></div>
  <h2 class="sec">थप · More</h2>
  <div class="modes">
   ${mode("🎲","linear-gradient(135deg,#4f46e5,#7c3aed)","सबै मिसाएर · Mixed","सबै पुराना प्रश्नबाट ५० प्रश्न","startRandom()")}
