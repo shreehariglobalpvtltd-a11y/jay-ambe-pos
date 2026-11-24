@@ -9,6 +9,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="TSC संगीता">
+<link rel="apple-touch-icon" href="data:image/png;base64,__ICON180__">
+<link rel="icon" type="image/png" href="data:image/png;base64,__ICON180__">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <!--PWA_HEAD-->
 <style>
 @font-face{font-family:Mukta;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,__F400__) format('woff2');unicode-range:U+0900-097F,U+1CD0-1CF9,U+200C-200D,U+20A8,U+20B9,U+25CC,U+A830-A839,U+A8E0-A8FF}
@@ -169,8 +172,14 @@ const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">"
 const KEY="sangita_tsc_v1";
 let S = {history:[],wrong:{},bm:{},imported:[],current:null,theme:null};
 function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||"null");if(v)S=Object.assign(S,v)}catch(e){}}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+/* दोस्रो सुरक्षित प्रति: IndexedDB (localStorage मेटिए पनि यहाँबाट फिर्ता) */
+function idb(){return new Promise((ok,no)=>{try{const r=indexedDB.open("sangita_tsc",1);r.onupgradeneeded=()=>r.result.createObjectStore("kv");r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)}catch(e){no(e)}})}
+function idbPut(v){idb().then(db=>{try{db.transaction("kv","readwrite").objectStore("kv").put(v,KEY)}catch(e){}}).catch(()=>{})}
+function idbGet(){return idb().then(db=>new Promise(ok=>{try{const q=db.transaction("kv").objectStore("kv").get(KEY);q.onsuccess=()=>ok(q.result||null);q.onerror=()=>ok(null)}catch(e){ok(null)}})).catch(()=>null)}
+let saveT=null;
+function save(){const t=JSON.stringify(S);try{localStorage.setItem(KEY,t)}catch(e){}clearTimeout(saveT);saveT=setTimeout(()=>idbPut(t),300)}
 load();
+try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{})}catch(e){}
 if(S.theme) document.documentElement.dataset.theme=S.theme;
 
 function allQ(){return DB.concat(S.imported||[])}
@@ -254,6 +263,7 @@ V.home=()=>{
  return topbar("TSC स्मार्ट परीक्षा २०८३",false)+`<div class="wrap">
  <div class="hero"><h1>नमस्ते, संगीता सुनार! 🌸</h1><p>तपाईंको सफलताको यात्रा आजैबाट सुरु हुन्छ।</p>
  <div class="chips"><span class="chip">शिक्षक सेवा आयोग</span><span class="chip">निम्नमाध्यमिक तह</span><span class="chip">तृतीय श्रेणी</span><span class="chip">प्रथम पत्र — सामान्य परीक्षा</span><span class="chip">📍 पोखरा, गण्डकी</span></div></div>
+ ${installCard()}${backupCard()}
  ${c?`<div class="card" style="border-color:var(--orange)"><b>⏸ अधुरो परीक्षा: ${esc(c.title)}</b><div class="note">${NUM(Object.keys(c.ans).length)}/${NUM(c.ids.length)} उत्तर दिइएको • बाँकी समय ${clock(remaining())}</div>
   <div class="row" style="margin-top:8px"><button class="btn org" onclick="render('exam')">पुनः सुरु गर्नुहोस्</button><button class="btn ghost" onclick="abandon()">रद्द गर्नुहोस्</button></div></div>`:""}
  ${last?`<div class="card" style="margin-top:12px"><div class="row" style="justify-content:space-between"><div><b>अन्तिम परीक्षा:</b> ${esc(last.title)}<div class="note">${fmt(last.score)}/${NUM(last.fullMarks)} अंक • ${fmt(last.pct,1)}%</div></div><button class="btn" onclick="view.result=${last.id};render('result')">नतिजा हेर्नुहोस्</button></div></div>`:""}
@@ -280,6 +290,12 @@ V.home=()=>{
  <footer>प्रश्नहरू सम्भावित अभ्यासका लागि हुन् — वास्तविक परीक्षामा यही प्रश्न आउने ग्यारेन्टी होइन।<br>तपाईंको अंक, इतिहास र Bookmark यही फोन/ब्राउजरमा मात्र सुरक्षित हुन्छन्।</footer>
  </div>`;
 };
+const IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+const STANDALONE=(window.navigator.standalone===true)||(window.matchMedia&&matchMedia("(display-mode: standalone)").matches);
+function installCard(){if(FRAMED||STANDALONE||S.hideInstall)return"";
+ return `<div class="infobox"><b>📱 फोनमा एप बनाउनुहोस् (डाटा नमेटियोस् भनेर)</b><br>${IOS?"<b>iPhone:</b> Safari मा यो पेज खोल्नुहोस् → तलको Share ⬆ बटन → “Add to Home Screen” → Add।":"<b>Android:</b> Chrome को ⋮ मेनु → “Add to Home screen” / “Install app”।"}<br><span class="note">होम स्क्रिनको आइकनबाट खोल्दा अंक, इतिहास र Bookmark लामो समयसम्म सुरक्षित रहन्छन्।</span><div class="row" style="margin-top:6px"><button class="btn ghost" onclick="S.hideInstall=1;save();render()">ठीक छ, लुकाउनुहोस्</button></div></div>`}
+function backupCard(){if(!S.history.length)return"";const d=S.lastBackup?Math.floor((Date.now()-S.lastBackup)/864e5):null;if(d!==null&&d<7)return"";
+ return `<div class="warnbox"><b>💾 ब्याकअप लिनुहोस्</b> — ${d===null?"अहिलेसम्म ब्याकअप लिइएको छैन।":NUM(d)+" दिनदेखि ब्याकअप लिइएको छैन।"} फोन फेर्दा वा ब्राउजर डाटा मेटिँदा पनि अंक नहराउन ब्याकअप फाइल Files/Google Drive/WhatsApp मा राख्नुहोस्।<div class="row" style="margin-top:6px"><button class="btn org" onclick="exportData();render()">ब्याकअप लिनुहोस्</button></div></div>`}
 function mode(ic,bg,t,s,fn){return `<button class="mode" onclick="${fn}"><div class="ic" style="background:${bg}">${ic}</div><div><b>${t}</b><span>${s}</span></div></button>`}
 function askYes(msg,fn){modal(`<p style="margin-top:0">${msg}</p><div class="row"><button class="btn red" id="yesb">हो</button><button class="btn" onclick="closeModal()">होइन</button></div>`);$("#yesb").onclick=()=>{closeModal();fn()}}
 function abandon(){askYes("अधुरो परीक्षा रद्द गर्ने?",()=>{S.current=null;save();render("home")})}
@@ -452,7 +468,9 @@ V.rules=()=>topbar("परीक्षा नियम र स्रोत")+`<d
 
 V.data=()=>topbar("डाटा र प्रश्न थप")+`<div class="wrap">
  <h2 class="sec">ब्याकअप (फोन फेर्दा काम लाग्छ)</h2><div class="card"><p class="note">तपाईंको इतिहास, गलत प्रश्न र Bookmark यही ब्राउजरमा मात्र सुरक्षित छन्। ब्राउजर डाटा मेटाउनुअघि ब्याकअप लिनुहोस्।</p>
- <div class="row"><button class="btn pri" onclick="exportData()">⬇ ब्याकअप डाउनलोड</button><label class="btn">⬆ ब्याकअप फिर्ता<input type="file" accept=".json" hidden onchange="importFile(this,'backup')"></label></div></div>
+ <div class="row"><button class="btn pri" onclick="exportData()">⬇ ब्याकअप डाउनलोड</button><label class="btn">⬆ ब्याकअप फाइलबाट फिर्ता<input type="file" accept=".json,application/json,text/plain" hidden onchange="importFile(this,'backup')"></label></div>
+ <p class="note" style="margin-top:10px">वा ब्याकअप पाठ यहाँ टाँस्नुहोस्:</p><textarea id="bkin" placeholder='{"history":[...]}'></textarea><div class="row" style="margin-top:6px"><button class="btn" onclick="restoreText($('#bkin').value)">पाठबाट फिर्ता</button></div>
+ ${S.lastBackup?`<p class="note">अन्तिम ब्याकअप: ${dt(S.lastBackup,1)}</p>`:""}</div>
  <h2 class="sec">प्रमाणित पुराना प्रश्न थप्नुहोस्</h2><div class="card">
  <p class="note">आयोगको प्रश्नपत्रबाट प्रमाणित प्रश्न मात्र थप्नुहोस्। प्रत्येक प्रश्नमा साल (year) र स्रोत (src) अनिवार्य छ। a = सही उत्तरको क्रम (क=०, ख=१, ग=२, घ=३)। t = विषय कोड: ${Object.keys(TOPICS).join(", ")}।</p>
  <textarea id="imp">[{"year":"२०८१","t":"const","p":"H","q":"प्रश्न यहाँ","o":["क","ख","ग","घ"],"a":0,"why":"व्याख्या","wrong":"अन्य विकल्प किन गलत","tip":"","src":"tsc.gov.np प्रश्नपत्र, २०८१","repeat":1}]</textarea>
@@ -460,7 +478,11 @@ V.data=()=>topbar("डाटा र प्रश्न थप")+`<div class="wra
  ${(S.imported||[]).length?`<button class="btn red" onclick="askYes('थपिएका सबै प्रश्न हटाउने?',()=>{S.imported=[];save();render()})">थपिएका ${NUM(S.imported.length)} प्रश्न हटाउनुहोस्</button>`:""}</div></div>
  <h2 class="sec">होम स्क्रिनमा राख्नुहोस्</h2><div class="card note"><b>iPhone (Safari):</b> तलको Share ⬆ बटन → “Add to Home Screen”।<br><b>Android (Chrome):</b> माथि ⋮ मेनु → “Add to Home screen” / “Install app”।<br>एक पटक खोलेपछि इन्टरनेट नभए पनि अभ्यास गर्न मिल्छ (होस्ट गरिएको PWA संस्करणमा)।</div></div>`;
 function download(name,text,type="application/json"){const b=text instanceof Blob?text:new Blob([text],{type});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
-function exportData(){const t=JSON.stringify(S);if(!FRAMED){download("sangita-tsc-backup.json",t);return}modal(`<h3 style="margin-top:0">ब्याकअप</h3><p class="note">यो पाठ कपी गरेर सुरक्षित राख्नुहोस्।</p><textarea id="bk" readonly>${esc(t)}</textarea><div class="row" style="margin-top:8px"><button class="btn pri" id="cpb">कपी गर्नुहोस्</button><button class="btn" onclick="closeModal()">बन्द</button></div>`);$("#cpb").onclick=()=>{const el=$("#bk");(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast("कपी भयो ✓")).catch(()=>{el.select()})}}
+function exportData(){const t=JSON.stringify(S);S.lastBackup=Date.now();save();
+ if(!FRAMED){const name="sangita-tsc-backup-"+new Date().toISOString().slice(0,10)+".json";
+  try{const f=new File([t],name,{type:"application/json"});if(navigator.canShare&&navigator.canShare({files:[f]})){navigator.share({files:[f],title:"संगीता TSC ब्याकअप"}).catch(()=>{});return}}catch(e){}
+  download(name,t);return}modal(`<h3 style="margin-top:0">ब्याकअप</h3><p class="note">यो पाठ कपी गरेर सुरक्षित राख्नुहोस्।</p><textarea id="bk" readonly>${esc(t)}</textarea><div class="row" style="margin-top:8px"><button class="btn pri" id="cpb">कपी गर्नुहोस्</button><button class="btn" onclick="closeModal()">बन्द</button></div>`);$("#cpb").onclick=()=>{const el=$("#bk");(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast("कपी भयो ✓")).catch(()=>{el.select()})}}
+function restoreText(t){try{const v=JSON.parse(t);if(!v.history)throw 0;S=Object.assign(S,v);save();toast("ब्याकअप फिर्ता भयो ✓");render("home")}catch(e){toast("ब्याकअप पाठ मिलेन।")}}
 function importFile(inp,kind){const f=inp.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{if(kind==="qs")importQs(r.result);else{try{const v=JSON.parse(r.result);if(!v.history)throw 0;S=Object.assign(S,v);save();toast("ब्याकअप फिर्ता भयो ✓");render("home")}catch(e){toast("फाइल मिलेन।")}}};r.readAsText(f)}
 function importQs(txt){let arr;try{arr=JSON.parse(txt)}catch(e){toast("JSON ढाँचा मिलेन।");return}
  if(!Array.isArray(arr))arr=[arr];let ok=0,bad=0;
@@ -489,7 +511,10 @@ function confetti(){const c=$("#confetti"),x=c.getContext("2d");c.width=innerWid
  (function loop(){x.clearRect(0,0,c.width,c.height);P.forEach(p=>{p.y+=p.vy;p.x+=p.vx;p.a+=.1;x.fillStyle=p.c;x.save();x.translate(p.x,p.y);x.rotate(p.a);x.fillRect(-p.r/2,-p.r/2,p.r,p.r*.6);x.restore()});if(++f<220)requestAnimationFrame(loop);else x.clearRect(0,0,c.width,c.height)})()}
 document.addEventListener("visibilitychange",()=>{if(document.hidden&&S.current)save()});
 /*PWA_SW*/
-render(S.current?"home":"home");
+render("home");
+/* localStorage खाली भेटिए IndexedDB को प्रतिबाट डाटा फिर्ता */
+idbGet().then(t=>{if(!t)return;try{const v=JSON.parse(t);const mine=(S.history||[]).length,theirs=(v.history||[]).length;
+ if(theirs>mine||(!S.current&&v.current&&theirs>=mine)){S=Object.assign(S,v);try{localStorage.setItem(KEY,t)}catch(e){}if(view.name==="home")render("home")}else if(mine)idbPut(JSON.stringify(S))}catch(e){}});
 </script>
 </body>
 </html>

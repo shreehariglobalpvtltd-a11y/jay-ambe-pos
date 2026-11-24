@@ -6,11 +6,14 @@ db = json.load(open(os.path.join(R, "questions.json")))
 tpl = open(os.path.join(R, "app.html")).read()
 tpl = (tpl.replace("__F400__", b64("mukta-400.woff2")).replace("__F700__", b64("mukta-700.woff2"))
           .replace("__F400L__", b64("mukta-400-latin.woff2")).replace("__F700L__", b64("mukta-700-latin.woff2"))
-          .replace("__DB__", json.dumps(db, ensure_ascii=False)))
+          .replace("__DB__", json.dumps(db, ensure_ascii=False))
+          .replace("__ICON180__", base64.b64encode(open(os.path.join(R, "icon-180.png"), "rb").read()).decode()))
 pwa_head = '<link rel="manifest" href="manifest.webmanifest">\n<link rel="icon" href="icon-192.png">\n<link rel="apple-touch-icon" href="icon-192.png">'
 pwa_sw = "if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){navigator.serviceWorker.register('sw.js').catch(function(){})}"
 open(os.path.join(D, "artifact.html"), "w").write(tpl)
 open(os.path.join(D, "Sangita-TSC-Smart-Exam-offline.html"), "w").write(tpl)
+sd = os.path.join(D, "single"); os.makedirs(sd, exist_ok=True)
+open(os.path.join(sd, "index.html"), "w").write(tpl.replace("<!--PWA_HEAD-->", "").replace("/*PWA_SW*/", pwa_sw))
 pw = os.path.join(D, "pwa"); os.makedirs(pw, exist_ok=True)
 open(os.path.join(pw, "index.html"), "w").write(tpl.replace("<!--PWA_HEAD-->", pwa_head).replace("/*PWA_SW*/", pwa_sw))
 json.dump({"name": "संगीता TSC स्मार्ट परीक्षा २०८३", "short_name": "TSC संगीता", "start_url": "./index.html", "scope": "./",
